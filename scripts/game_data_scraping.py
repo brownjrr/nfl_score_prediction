@@ -15,6 +15,8 @@ from selenium.webdriver.chrome.options import Options
 from pytz import timezone
 import re
 import timeout_decorator
+import glob
+
 
 def get_current_time():
     tz = timezone('EST')
@@ -305,7 +307,7 @@ def get_webdriver():
 
     return driver
 
-timeout_decorator.timeout(60)
+@timeout_decorator.timeout(60)
 def get_pbp_tables_with_links(driver, site, html_save_file, data_save_file):
     try:
         driver.get(site)
@@ -323,8 +325,6 @@ def get_pbp_tables_with_links(driver, site, html_save_file, data_save_file):
     # write html for this page to file
     with open(html_save_file, "w+") as f:
         f.write(table_html)
-    
-    # print(pbp_table.get_attribute('outerHTML'))
     
     headers = []
     data = []
@@ -383,6 +383,38 @@ def get_pbp_tables_with_links(driver, site, html_save_file, data_save_file):
     print(f"[{get_current_time()}] Finishing Up {i}")
 
 if __name__ == '__main__':
+    base_save_loc = "C:/Users/brown/OneDrive/pbp_data_files/"
+
+    all_box_score_links = get_seen_pbp_links()
+
+    seen_pages = [
+        f'https://www.pro-football-reference.com/boxscores/{i.split("/")[-1].split(".")[0]}.htm'
+        for i in glob.glob(base_save_loc)
+    ]
+
+    print(f"Num Seen Pages: {len(seen_pages)}")
+
+    driver = get_webdriver()
+
+    while len(seen_pages) < 2992:
+        seen_pages = [
+            f'https://www.pro-football-reference.com/boxscores/{i.split("/")[-1].split(".")[0]}.htm'
+            for i in glob.glob(base_save_loc)
+        ]
+
+    print(f"Num Seen Pages: {len(seen_pages)}")
+
+    for i in all_box_score_links:
+        box_score_id = i.split("/")[-1].split(".")[0]
+        html_save_file = f"{base_save_loc}{box_score_id}.txt"
+
+        get_pbp_tables_with_links(
+            driver, 
+            site=i, 
+            html_save_file=html_save_file,
+            data_save_file=f"{base_save_loc}dataframes/play_by_play_dfs.txt"
+        )
+
     # get_box_score_objs()
     # get_play_by_play_dfs()
     # concat_pbp_tables()
