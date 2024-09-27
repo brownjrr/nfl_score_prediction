@@ -14,7 +14,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from pytz import timezone
 import re
-
+import timeout_decorator
 
 def get_current_time():
     tz = timezone('EST')
@@ -305,7 +305,8 @@ def get_webdriver():
 
     return driver
 
-def get_pbp_tables_with_links(driver, site, html_save_file):
+timeout_decorator.timeout(60)
+def get_pbp_tables_with_links(driver, site, html_save_file, data_save_file):
     try:
         driver.get(site)
         print(f"[{get_current_time()}] URL Reached")
@@ -375,7 +376,7 @@ def get_pbp_tables_with_links(driver, site, html_save_file):
         'data': df.to_json()
     }
 
-    dict_to_json(save_dict, "../data/play_by_play_dfs.txt")
+    dict_to_json(save_dict, data_save_file)
 
     time.sleep(1)
 
