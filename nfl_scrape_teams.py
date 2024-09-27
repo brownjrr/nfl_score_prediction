@@ -39,6 +39,34 @@ UPDATED_COLUMNS = {
     }
 
 
+def read_boxscore_stub(stub:str):
+    '''
+    Takes in the current team and year's stub and pulls the href tag
+    that refers to the boxscore
+    '''
+    r = requests.get(url + stub)
+    temp_games = BeautifulSoup(r.content, 'html.parser')
+    # Pull the html that makes up the season for the team in question
+    game_results_html = temp_games.find_all('table')[1]
+    
+    # Convert each table row to a list - skip the top 2 headers
+    game_rows = game_results_html.find_all('tr')[2:]
+
+    # Save the href tag for the boxscores
+    game_score_stub = []
+
+    # example stub is: "/boxscores/201401110nwe.htm"
+    for game_row in game_rows:
+        boxscore_stub = game_row.find('td', attrs={'data-stat': 'boxscore_word'})
+        if boxscore_stub.a is None:
+            game_score_stub.append("")
+        else:
+            game_score_stub.append(
+                boxscore_stub.a.get('href')
+            )
+    return game_score_stub
+
+
 # We'll use the fantasy listing to get all players per year
 def scrape_team_years(year:int)-> pd.DataFrame:
     '''
@@ -85,6 +113,11 @@ def scrape_team_years(year:int)-> pd.DataFrame:
                 
                 # Now read in the gamelog for this year for this team
                 tdf = pd.read_html(url + stub)[1]
+
+                # Store boxscore stubs per game
+                boxscore_stubs = read_boxscore_stub(stub)
+                tdf['boxscore_stub'] = boxscore_stubs
+                tdf['boxscore_link'] = [url + stub for stub in boxscore_stubs]
                 
                 # Use our dictionary to rename the columns
                 # We'll only be keeping the headers at index 1 eventually
@@ -123,12 +156,14 @@ def scrape_team_years(year:int)-> pd.DataFrame:
                 
                 # Add Remaining info
                 tdf['team_name'] = team_name
-                tdf['team_abbr'] = re.search(r'/teams/([a-z]{3})/', stub).group(1)
+                tdf['team_id'] = re.search(r'/teams/([a-z]{3})/', stub).group(1)
                 tdf['year'] = year
+                tdf['team_stub'] = stub
+                tdf['team_link'] = url + stub
                 
                 # Make our dataframe
                 df.append(tdf)
-                time.sleep(10)
+                time.sleep(5)
             except:
                 pass
             
@@ -137,4 +172,4 @@ def scrape_team_years(year:int)-> pd.DataFrame:
     df = pd.concat(df) 
     return df
 
-scrape_team_years(2013)
+#scrape_team_years(2013)
