@@ -14,9 +14,11 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from pytz import timezone
 import re
-import timeout_decorator
 import glob
+import warnings
 
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def get_current_time():
     tz = timezone('EST')
@@ -307,7 +309,6 @@ def get_webdriver():
 
     return driver
 
-@timeout_decorator.timeout(60)
 def get_pbp_tables_with_links(driver, site, html_save_file, data_save_file):
     try:
         driver.get(site)
@@ -402,26 +403,21 @@ if __name__ == '__main__':
             for i in glob.glob(base_save_loc)
         ]
 
-    print(f"Num Seen Pages: {len(seen_pages)}")
+        print(f"Num Seen Pages: {len(seen_pages)}")
 
-    for i in all_box_score_links:
-        box_score_id = i.split("/")[-1].split(".")[0]
-        html_save_file = f"{base_save_loc}{box_score_id}.txt"
+        for i in all_box_score_links:
+            if i in seen_pages:
+                continue
 
-        get_pbp_tables_with_links(
-            driver, 
-            site=i, 
-            html_save_file=html_save_file,
-            data_save_file=f"{base_save_loc}dataframes/play_by_play_dfs.txt"
-        )
+            box_score_id = i.split("/")[-1].split(".")[0]
+            html_save_file = f"{base_save_loc}{box_score_id}.txt"
 
-    # get_box_score_objs()
-    # get_play_by_play_dfs()
-    # concat_pbp_tables()
-    # get_pbp_tables_with_links(
-    #     driver=get_webdriver(), 
-    #     site="https://www.pro-football-reference.com/boxscores/201309220oti.htm",
-    #     html_save_file="../temp_data/201309220oti.txt",
-    # )
-
-    pass
+            try:
+                get_pbp_tables_with_links(
+                    driver, 
+                    site=i, 
+                    html_save_file=html_save_file,
+                    data_save_file=f"{base_save_loc}dataframes/play_by_play_dfs.txt"
+                )
+            except:
+                print(f"SKIPPING {i}")
