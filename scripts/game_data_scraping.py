@@ -306,7 +306,12 @@ def get_webdriver():
     return driver
 
 def get_pbp_tables_with_links(driver, site, html_save_file):
-    driver.get(site)
+    try:
+        driver.get(site)
+        print(f"[{get_current_time()}] URL Reached")
+    except Exception as e:
+        print(f"Error Encountered: {e}")
+        return
 
     pbp_div = driver.find_element(By.ID, "all_pbp")
 
