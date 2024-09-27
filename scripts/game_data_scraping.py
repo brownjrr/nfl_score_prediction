@@ -184,11 +184,11 @@ def get_play_by_play_dfs():
                     'data': df.to_json()
                 }
 
-                # dict_to_json(save_dict, "../data/play_by_play_dfs.txt")
+                dict_to_json(save_dict, "../data/play_by_play_dfs.txt")
         
-                # time.sleep(1)
+                time.sleep(1)
 
-                # print(f"[{get_current_time()}] Finishing Up {i}")
+                print(f"[{get_current_time()}] Finishing Up {i}")
 
 def get_seen_pbp_dfs():
     seen_set = set()
@@ -305,7 +305,7 @@ def get_webdriver():
 
     return driver
 
-def test_get_pbp_table(driver, site, html_save_file):
+def get_pbp_tables_with_links(driver, site, html_save_file):
     driver.get(site)
 
     pbp_div = driver.find_element(By.ID, "all_pbp")
@@ -315,8 +315,8 @@ def test_get_pbp_table(driver, site, html_save_file):
     table_html = pbp_table.get_attribute('outerHTML')
 
     # write html for this page to file
-    with open(html_save_file, "a+") as f:
-        f.write(table_html + "\n")
+    with open(html_save_file, "w+") as f:
+        f.write(table_html)
     
     # print(pbp_table.get_attribute('outerHTML'))
     
@@ -365,13 +365,22 @@ def test_get_pbp_table(driver, site, html_save_file):
 
     df = pd.DataFrame(data, columns=columns)
 
-    print(df)
+    save_dict = {
+        'index': site,
+        'data': df.to_json()
+    }
+
+    dict_to_json(save_dict, "../data/play_by_play_dfs.txt")
+
+    time.sleep(1)
+
+    print(f"[{get_current_time()}] Finishing Up {i}")
 
 if __name__ == '__main__':
     # get_box_score_objs()
     # get_play_by_play_dfs()
     # concat_pbp_tables()
-    # test_get_pbp_table(
+    # get_pbp_tables_with_links(
     #     driver=get_webdriver(), 
     #     site="https://www.pro-football-reference.com/boxscores/201309220oti.htm",
     #     html_save_file="../temp_data/201309220oti.txt",
