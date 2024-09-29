@@ -383,41 +383,56 @@ def get_pbp_tables_with_links(driver, site, html_save_file, data_save_file):
 
     print(f"[{get_current_time()}] Finishing Up {i}")
 
+def get_seen_html_pages_pbp(base_save_loc):
+    # seen_pages = [
+    #     f'https://www.pro-football-reference.com/boxscores/{}.htm'
+    #     for i in glob.glob(base_save_loc+"*.txt")
+    # ]
+
+    seen_pages = []
+
+    for i in glob.glob(base_save_loc+"*.txt"):
+        game_id = i.replace("\\", "/").split("/")[-1].split(".")[0]
+        page_name = f'https://www.pro-football-reference.com/boxscores/{game_id}.htm'
+        seen_pages.append(page_name)
+
+    return seen_pages
+
 if __name__ == '__main__':
-    base_save_loc = "C:/Users/brown/OneDrive/pbp_data_files/"
+    # base_save_loc = "C:/Users/brown/OneDrive/pbp_data_files/"
+    base_save_loc = "C:/Users/Robert Brown/OneDrive/pbp_data_files/"
 
     all_box_score_links = get_seen_pbp_links()
 
-    seen_pages = [
-        f'https://www.pro-football-reference.com/boxscores/{i.split("/")[-1].split(".")[0]}.htm'
-        for i in glob.glob(base_save_loc)
-    ]
+    seen_pages = get_seen_html_pages_pbp(base_save_loc)
 
     print(f"Num Seen Pages: {len(seen_pages)}")
 
     driver = get_webdriver()
 
     while len(seen_pages) < 2992:
-        seen_pages = [
-            f'https://www.pro-football-reference.com/boxscores/{i.split("/")[-1].split(".")[0]}.htm'
-            for i in glob.glob(base_save_loc)
-        ]
+        seen_pages = get_seen_html_pages_pbp(base_save_loc)
+
+        # print(seen_pages)
+        # print(f"seen_pages:\n{seen_pages}")
+        # print(f"all_box_score_links:\n{all_box_score_links}")
 
         print(f"Num Seen Pages: {len(seen_pages)}")
+        
+        missing_pages = all_box_score_links.difference(set(seen_pages))
 
-        for i in all_box_score_links:
+        print(f"Missing Pages: {len(missing_pages)}")
+
+        for i in missing_pages:
             if i in seen_pages:
                 continue
 
             box_score_id = i.split("/")[-1].split(".")[0]
             html_save_file = f"{base_save_loc}{box_score_id}.txt"
 
-            try:
-                get_pbp_tables_with_links(
-                    driver, 
-                    site=i, 
-                    html_save_file=html_save_file,
-                    data_save_file=f"{base_save_loc}dataframes/play_by_play_dfs.txt"
-                )
-            except:
-                print(f"SKIPPING {i}")
+            get_pbp_tables_with_links(
+                driver, 
+                site=i, 
+                html_save_file=html_save_file,
+                data_save_file=f"{base_save_loc}dataframes/play_by_play_dfs_pt_2.txt"
+            )
