@@ -7,6 +7,21 @@ import re
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
+position_type_dict = {
+    'offense': {'QB', 'RB', 'WR', 'TE', 'OL',},
+    'defense': {'LB', 'DB', 'DL',},
+    'special_teams': {'PR', 'P', 'K',},
+}
+
+# inverting aliases dictionary
+inv_position_type_dict = dict()
+
+for i in position_type_dict:
+    for j in position_type_dict[i]:
+        inv_position_type_dict[j] = i
+
+print(f"inv_position_type_dict:\n{inv_position_type_dict}")
+
 with open("../data/abbrev_map.json", "r") as f:
     abbrev_map = json.load(f)
 
@@ -83,21 +98,49 @@ def combine_jsons():
     # print(f"column_set: {column_set}")
     # print(f"column_set length: {len(column_set)}")
 
-def add_id_col_pbp():
-    df = pd.read_csv("../temp_data/combined_pbp.csv")
+def get_play_by_play_df():
+    df = pd.read_csv("../data/play_by_play.csv")
+    players_df = pd.read_csv("../data/players.csv")
 
-    # print(f"Min Date: {df['event_date'].min()} - Max Date: {df['event_date'].max()}")
+    df = df.merge(players_df[['link', 'player_id', 'position']], left_on=['player'], right_on=['link'], how='inner').dropna(subset=['position'])
+    df = df[df['position']!="UNKNOWN"]
 
-    # games_df = pd.read_csv("../data/raw_teams_ads.csv")
-    # games_df['event_date'] = pd.to_datetime(games_df['event_date'])
+    return df
 
-    # print(f"{df.columns}\n{df[['team_1_name', 'team_2_name',]]}")
-    # print(f"{games_df.columns}\n{games_df[['team_name', 'team_abbr']]}")
+def get_all_interaction_probabilities():
+    offensive_positions = pd.Series([i for i in inv_position_type_dict if inv_position_type_dict[i]=="offense"])
+    offensive_positions = offensive_positions.to_frame(name="pos_1")
 
-    # print(df.merge(games_df, left_on=['team_1_name', 'event_date'], right_on=['team_abbr', 'event_date']))
+    defensive_positions = pd.Series([i for i in inv_position_type_dict if inv_position_type_dict[i]=="defense"])
+    defensive_positions = defensive_positions.to_frame(name="pos_2")
 
-    # FINISH ME: Find a way to join pbp data and game data
+    df = pd.merge(offensive_positions, defensive_positions, how='cross')
+    temp_df = df[['pos_2', 'pos_1']].rename(columns={'pos_1': 'pos_2', 'pos_2': 'pos_1'})
+    df = pd.concat([df, temp_df])
+
+    pbp_df = get_play_by_play_df()
+
+    def get_interaction_prob(row):
+        print(f"Position 1: {row['pos_1']} | Position 2: {row['pos_2']}")
+        
+        pos1 = row['pos_1']
+        pos2 = row['pos_2']
+
+        temp_df = pbp_df.groupby(['Quarter', 'Time', 'Down', 'ToGo', 'Location', 'link_x', "team_1", "team_2"])['position'].apply(list).reset_index()
+        pos1_rows = temp_df[[(pos1 in x) for x in temp_df.position]].shape[0]
+        num_p1_p2_rows = temp_df[[(pos1 in x) and (pos2 in x) for x in temp_df.position]].shape[0]
+        
+        return num_p1_p2_rows / pos1_rows
+
+    df['interaction_prob'] = df.apply(lambda row: get_interaction_prob(row), axis=1)
     
+    print(df)
+
+    df.to_csv("../data/interaction_prob.csv", index=False)
+
 if __name__ == "__main__":
-    combine_jsons()
+    # combine_jsons()
     # add_id_col_pbp()
+    # get_play_by_play_df()
+    # get_interaction_prob(get_play_by_play_df(), "RB", "DB")
+    get_all_interaction_probabilities()
