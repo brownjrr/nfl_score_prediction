@@ -3,7 +3,9 @@ import json
 import glob
 import warnings
 import re
+import spacy
 
+nlp = spacy.load("en_core_web_sm")
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -107,6 +109,49 @@ def get_play_by_play_df():
 
     return df
 
+def get_player_pos_dict():
+    df = pd.read_csv("../data/players.csv")
+    df['position'] = df['position'].fillna("POSITION_NOT_FOUND")
+
+    return df[['player_id', 'position']].set_index("player_id").to_dict()['position']
+
+def prepocess_text(x, player_pos_dict):
+    pattern = r'<a href.*?/a>'
+
+    players_refs = re.findall(pattern, x)
+    
+    players = []
+    for i in players_refs:
+        players.append(re.search(r'".*?"', i).group().strip("\"").split('/')[-1].replace(".htm", ""))
+    
+    player_tag_dict = dict(zip(players_refs, players))
+
+    new_text = x
+    for i in players_refs:
+        if 'href="/teams/' in i:
+            new_text = new_text.replace(i, "")
+        else:
+            # print((type(i), i))
+            # print(player_tag_dict[i])
+            pid = player_tag_dict[i]
+
+            if pid in player_pos_dict:
+                new_text = new_text.replace(i, player_pos_dict[pid])
+            else:
+                new_text = new_text.replace(i, f"<PLAYER_NOT_FOUND:{pid}>")
+
+    new_text = re.sub(r'[\|/|"|#]', r'', new_text) # special_char
+
+    return new_text
+
+def preprocess_play_text(df):
+    player_pos_dict = get_player_pos_dict()
+
+    df['play_text'] = df['Detail'].apply(prepocess_text, args=(player_pos_dict,),)
+    df = df[~((df['play_text'].str.contains("POSITION_NOT_FOUND")) | (df['play_text'].str.contains("PLAYER_NOT_FOUND")))]
+
+    return df
+
 def get_all_interaction_probabilities():
     offensive_positions = pd.Series([i for i in inv_position_type_dict if inv_position_type_dict[i]=="offense"])
     offensive_positions = offensive_positions.to_frame(name="pos_1")
@@ -138,9 +183,38 @@ def get_all_interaction_probabilities():
 
     df.to_csv("../data/interaction_prob.csv", index=False)
 
+def get_sentence_parts():
+    df = get_play_by_play_df().head(1)
+    df = preprocess_play_text(df)
+
+    print(df)
+    
+    for text in df['play_text']:
+        doc = nlp(text)
+
+        subjects = []
+        verbs = []
+        
+        new_sentence = ""
+        
+        for token in doc:
+            print(f"POS: {token.dep_}")
+            if token.dep_ == "nsubj":
+                subject = token.text
+                subjects.append(subject)
+            if token.dep_ == "ROOT":
+                verb = token.text
+                verbs.append(verb)
+
+        print(f"text: {text}")
+        print("verbs:", subjects)
+        print("verbs:", verbs)
+
+
 if __name__ == "__main__":
     # combine_jsons()
     # add_id_col_pbp()
     # get_play_by_play_df()
     # get_interaction_prob(get_play_by_play_df(), "RB", "DB")
-    get_all_interaction_probabilities()
+    # get_all_interaction_probabilities()
+    get_sentence_parts()
