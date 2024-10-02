@@ -36,7 +36,7 @@ def combine_jsons():
     column_len_set = set()
     column_set = set()
     dfs = []
-    for df_json_file in [i.replace("\\", "/") for i in glob.glob("C:/Users/brown/OneDrive/pbp_data_files/dataframes/*.txt")]:
+    for df_json_file in [i.replace("\\", "/") for i in glob.glob("C:/Users/Robert Brown/OneDrive/pbp_data_files/dataframes/*.txt")]:
         with open(df_json_file, "r") as f:
             lines = f.readlines()
 
@@ -74,15 +74,15 @@ def combine_jsons():
     print(f"Num Unique Links: {len(df['link'].unique())}")
 
     pattern = r'<a href.*?/a>'
-    df['player'] = df['Detail'].apply(lambda x: re.findall(pattern, x))
+    df['players'] = df['Detail'].apply(lambda x: re.findall(pattern, x))
 
     # discard plays where no players were found AND
     # discard plays where only 1 player is part of the interaction
     # (these are often kicking/punting plays)
-    df = df[df['player'].str.len() > 1]
-    df['player'] = df['player'].apply(lambda x: [re.findall(r"\".*?\"", i)[0].replace('"', '') for i in x])
-    df = df.explode('player')
-    df['player'] = df['player'].apply(lambda x: "https://www.pro-football-reference.com"+x)
+    # df = df[df['player'].str.len() > 1]
+    df['players'] = df['players'].apply(lambda x: [re.findall(r"\".*?\"", i)[0].replace('"', '') for i in x])
+    # df = df.explode('player')
+    df['players'] = df['players'].apply(lambda x: [i.split("/")[-1].replace(".htm", "") for i in x])
 
     # creating event_date columns
     df['event_date'] = pd.to_datetime(df['boxscore_id'].str[:-4])
@@ -140,7 +140,7 @@ def prepocess_text(x, player_pos_dict):
             else:
                 new_text = new_text.replace(i, f"<PLAYER_NOT_FOUND:{pid}>")
 
-    new_text = re.sub(r'[\|/|"|#]', r'', new_text) # special_char
+    new_text = re.sub(r'[\|/|)|(|"|#|:]', r'', new_text) # special_char
 
     return new_text
 
@@ -210,11 +210,78 @@ def get_sentence_parts():
         print("verbs:", subjects)
         print("verbs:", verbs)
 
+def transform_play_test(x):
+    penalty_play = False
+
+    if "penalty" in x.lower():
+        penalty_play = True
+    
+    doc = nlp(x)
+    sentences = doc.sents
+
+    sentences = [i.text for i in sentences]
+        
+    found_pos_by_sent = []
+    for sent in sentences:
+        # remove periods from text
+        sent = sent.replace(".", "")
+        words = sent.split()
+
+        found = [] # found position
+
+        for i in words:
+            if i not in inv_position_type_dict:
+                continue
+            
+            found.append(i)
+
+        found_pos_by_sent.append(found)
+
+    return (found_pos_by_sent, penalty_play, len(sentences))
+
+def off_def_players_interactions(x):
+    off_player = None
+    def_players = []
+
+    for i in x[::-1]:
+        if inv_position_type_dict[i] == 'defense':
+            def_players.append(i)
+        elif inv_position_type_dict[i] == 'offense':
+            off_player = i
+            break
+
+    return (off_player, def_players)
+
+def get_player_interaction_tuples():
+    df = get_play_by_play_df()
+
+    df = preprocess_play_text(df)
+
+    df['players_in_text'] = df['play_text'].apply(transform_play_test)
+    df[['players_in_text', 'penalty_on_play', 'num_sentences']] = pd.DataFrame(df['players_in_text'].tolist(), index=df.index)
+
+    # sort by num_sentences
+    df = df.sort_values(by=['num_sentences'], ascending=False)
+
+    # explode play_text column to get one row for each sentence in a play's description
+    df = df.explode('players_in_text')
+
+    df['num_players'] = df['players_in_text'].str.len()
+
+    df['off_def_interactions'] = df['players_in_text'].apply(off_def_players_interactions)
+    df[['offensive_player', 'defensive_players']] = pd.DataFrame(df['off_def_interactions'].tolist(), index=df.index)
+
+    print(f"df.columns: {df.columns}")
+    print(f"df:\n{df}")
+
+    return df
+    
 
 if __name__ == "__main__":
-    # combine_jsons()
+    combine_jsons()
     # add_id_col_pbp()
     # get_play_by_play_df()
     # get_interaction_prob(get_play_by_play_df(), "RB", "DB")
     # get_all_interaction_probabilities()
-    get_sentence_parts()
+    # get_sentence_parts()
+    # get_player_interaction_tuples()
