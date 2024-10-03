@@ -74,7 +74,7 @@ def combine_jsons():
     print(f"Num Unique Links: {len(df['link'].unique())}")
 
     pattern = r'<a href.*?/a>'
-    df['players'] = df['Detail'].apply(lambda x: re.findall(pattern, x))
+    df['players'] = df['Detail'].apply(lambda x: [i for i in re.findall(pattern, x) if "/players/" in i])
 
     # discard plays where no players were found AND
     # discard plays where only 1 player is part of the interaction
@@ -102,11 +102,6 @@ def combine_jsons():
 
 def get_play_by_play_df():
     df = pd.read_csv("../data/play_by_play.csv")
-    players_df = pd.read_csv("../data/players.csv")
-
-    df = df.merge(players_df[['link', 'player_id', 'position']], left_on=['player'], right_on=['link'], how='inner').dropna(subset=['position'])
-    df = df[df['position']!="UNKNOWN"]
-
     return df
 
 def get_player_pos_dict():
@@ -131,8 +126,6 @@ def prepocess_text(x, player_pos_dict):
         if 'href="/teams/' in i:
             new_text = new_text.replace(i, "")
         else:
-            # print((type(i), i))
-            # print(player_tag_dict[i])
             pid = player_tag_dict[i]
 
             if pid in player_pos_dict:
@@ -183,33 +176,6 @@ def get_all_interaction_probabilities():
 
     df.to_csv("../data/interaction_prob.csv", index=False)
 
-def get_sentence_parts():
-    df = get_play_by_play_df().head(1)
-    df = preprocess_play_text(df)
-
-    print(df)
-    
-    for text in df['play_text']:
-        doc = nlp(text)
-
-        subjects = []
-        verbs = []
-        
-        new_sentence = ""
-        
-        for token in doc:
-            print(f"POS: {token.dep_}")
-            if token.dep_ == "nsubj":
-                subject = token.text
-                subjects.append(subject)
-            if token.dep_ == "ROOT":
-                verb = token.text
-                verbs.append(verb)
-
-        print(f"text: {text}")
-        print("verbs:", subjects)
-        print("verbs:", verbs)
-
 def transform_play_test(x):
     penalty_play = False
 
@@ -222,12 +188,15 @@ def transform_play_test(x):
     sentences = [i.text for i in sentences]
         
     found_pos_by_sent = []
+    processed_words = []
     for sent in sentences:
         # remove periods from text
         sent = sent.replace(".", "")
         words = sent.split()
 
         found = [] # found position
+
+        processed_words.append(words)
 
         for i in words:
             if i not in inv_position_type_dict:
@@ -255,6 +224,9 @@ def off_def_players_interactions(x):
 def get_player_interaction_tuples():
     df = get_play_by_play_df()
 
+    # dropping rows without Details
+    df = df[~df['Detail'].isna()]
+
     df = preprocess_play_text(df)
 
     df['players_in_text'] = df['play_text'].apply(transform_play_test)
@@ -270,18 +242,62 @@ def get_player_interaction_tuples():
 
     df['off_def_interactions'] = df['players_in_text'].apply(off_def_players_interactions)
     df[['offensive_player', 'defensive_players']] = pd.DataFrame(df['off_def_interactions'].tolist(), index=df.index)
+    df['num_players'] = df['players'].apply(lambda x: len(re.findall(r"\'.*?\'", x)))
 
-    print(f"df.columns: {df.columns}")
-    print(f"df:\n{df}")
+    # drop row with no offensive player
+    df = df[~df['offensive_player'].isna()]
 
-    return df
+    def func(group):
+        seen_dict = dict()
+
+        value_list = group['defensive_players'].values.tolist()
+        
+        for sub_list in value_list:
+            for val in sub_list:
+                if val not in seen_dict:
+                    seen_dict[val] = 1
+                else:
+                    seen_dict[val] += 1
+
+        return seen_dict
+
+    results = df.groupby(['offensive_player']).apply(func)
+    results = results.to_frame(name='data')
+
+    results['data'].apply(lambda x: x)
+    results = results.to_dict()['data']
+
+    totals_dict = dict()
     
+    # get totals for each 
+    for i in results:
+        totals_dict[i] = 0
+        for j in results[i]:
+            totals_dict[i] += results[i][j]
+    
+    interaction_prob_dict = dict()
+
+    for off_pos in results:
+        interaction_prob_dict[off_pos] = dict()
+
+        for def_pos in position_type_dict['defense']:
+            if def_pos in results[off_pos]:
+                prob = results[off_pos][def_pos] / totals_dict[off_pos]
+            else:
+                prob = 0
+
+            interaction_prob_dict[off_pos][def_pos] = prob
+
+    prob_df = pd.DataFrame.from_dict(interaction_prob_dict).T
+
+    print(prob_df)
+
+    prob_df.to_csv("../data/interaction_prob.csv", index=False)
+
 
 if __name__ == "__main__":
-    combine_jsons()
-    # add_id_col_pbp()
+    # combine_jsons()
     # get_play_by_play_df()
-    # get_interaction_prob(get_play_by_play_df(), "RB", "DB")
-    # get_all_interaction_probabilities()
-    # get_sentence_parts()
-    # get_player_interaction_tuples()
+    # get_interaction_prob(get_play_by_play_df(), "RB", "DB") # deprecated
+    # get_all_interaction_probabilities() # deprecated
+    get_player_interaction_tuples()
