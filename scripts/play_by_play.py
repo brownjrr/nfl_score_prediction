@@ -292,7 +292,7 @@ def get_player_interaction_tuples():
 
     print(prob_df)
 
-    prob_df.to_csv("../data/interaction_prob.csv", index=False)
+    prob_df.to_csv("../data/interaction_prob.csv", index=True)
 
 
 if __name__ == "__main__":
