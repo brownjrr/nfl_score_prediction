@@ -2,6 +2,7 @@ import pandas as pd
 import random
 import re
 
+
 # Define our feature engineering by grouping
 # 1. Coaches table
 
@@ -13,37 +14,14 @@ def prep_coaches_df(file_loc:str) -> pd.DataFrame:
     df = pd.read_csv(file_loc)
     df.columns = map(str.lower, df.columns)
     df['team'] = df['team'].str.lower()
-    return coach_df
+    return df
 
-# 2. Players table
-def prep_rosters_df(file_loc:str) -> pd.DataFrame:
-    """
-    Read in roster information containing players per team per year
-    Need to add in key team_id -> e.g. Cardinal: crd
-    #TODO: For now - we'll use a dummy variable from "dummy_players_rank.csv"
-    Important column will be player_rank
-    """
 
-    df = pd.read_csv(file_loc)
-    # For testing purposes
-    random.seed(42)
 
-    # Generate a dummy ranking for each player on the roster
-    roster_players = roster_df.shape[0]
-    df['player_rank'] = [round(random.uniform(1, 50), 1) for _ in range(roster_players]
-
-    # Add in the team_id using regex
-    pattern = r'^.*/teams/([a-z]{3}).*roster.htm$'
-    rosters_df['team_id'] = (roster_df['roster_link']
-                             .apply(lambda x: 
-                                    re.findall(pattern, x)[0]
-                                   )
-                            )
-
-# 3. Teams table
+# 2. Teams table
 def prep_teams_df(file_loc: str) -> pd.DataFrame:
     """
-    Read in teams_df to merge
+    Read in teams.csv to merge
     """
 
     df = pd.read_csv(file_loc)
@@ -55,14 +33,53 @@ def prep_teams_df(file_loc: str) -> pd.DataFrame:
                 )
 
     # Add in opposiing team name
-    df['opp_id'] = df['opp'].apply(lambda x: team_dict.get(x))
+    df['opp_team_id'] = df['opp'].apply(lambda x: team_dict.get(x))
+    df.rename(columns={'team_abbr': 'home_team_id'}, inplace=True)
 
     # Split the record
-    df[['wins', 'losses', 'ties']] = teams_df['rec'].str.split('-', expand=True)
-    df[['over_under_value', 'over_under_cat']] = (teams_df['over_under']
+    df[['wins', 'losses', 'ties']] = df['rec'].str.split('-', expand=True)
+    df[['over_under_value', 'over_under_cat']] = (df['over_under']
                                                   .str
                                                   .extract(r'(\d+\.?\d*) \((\w+)\)'))
+
+    # Convert number columns to numbers
+    # There were 2 games in 2022 that were cancelled
+    # Remove those columns
+    #non_numeric_mask = ~df['off_yds_total'].str.replace('.', '', regex=False).str.isnumeric()
+    #non_numeric_values = df.loc[non_numeric_mask, ]
+
+    score_columns = ['score_team', 'score_opp']
+    numeric_columns = ['off_first_downs', 'off_yds_total',
+                       'off_yds_pass', 'off_yds_rush', 'off_timeout', 'def_first_downs',
+                       'def_yds_total', 'def_yds_pass', 'def_yds_rush', 'def_timeout',
+                       'off_exp_pts', 'def_exp_pts', 'sptm_exp_pts']
+
+    # If there is no score, we can't have a prediction
+    df[score_columns] = df[score_columns].apply(pd.to_numeric, errors='coerce')
+    df.dropna(subset=numeric_columns, inplace=True)
+
     return df
-    
-    
-    
+
+
+
+
+
+# 5. Assign players to the teams
+def team_coach_merge(team_df: pd.DataFrame,
+                     coach_df: pd.DataFrame
+                    ) -> pd.DataFrame:
+    """
+    This takes 2 dataframes and merges them together to make a combined dataset
+    for the teams
+    args:
+        - team_df: output from the prep_teams_df
+        - coach_df: output from the prep_coaches_df
+
+    output:
+        - merged dataframe based on coach information
+    """
+    df = pd.merge(
+        team_df,
+        coach_df,
+        left_on = ['home_team_id', 
+    )
