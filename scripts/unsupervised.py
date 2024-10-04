@@ -8,6 +8,7 @@ from sklearn import metrics
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import DBSCAN
 from sklearn.decomposition import TruncatedSVD
+from sklearn.manifold import TSNE
 
 
 pd.set_option('display.width', 10000)
@@ -119,18 +120,14 @@ def kmean_cluster_2d():
     plt.title("Text Clustering with K-Means")
     plt.show()
 
-def kmean_cluster_3d():
-    df = get_pbp_dataframe().head(5000)
-
-    df = preprocess_play_text(df)
-
+def kmeans_cluster_3d(df, num_examples):
     print(df)
 
     tfidf_vect = TfidfVectorizer()
     tfidf = tfidf_vect.fit_transform(df['play_text'].values)
 
     # Reduce dimensionality using LSA (Latent Semantic Analysis)
-    lsa = TruncatedSVD(n_components=3)
+    lsa = TruncatedSVD(n_components=4)
     lsa_matrix = lsa.fit_transform(tfidf)
 
     # Perform K-Means clustering
@@ -143,12 +140,13 @@ def kmean_cluster_3d():
 
     print(f"Unique Labels: {set(labels)}")
 
-    show_cluster_examples(df, labels, k, num_examples=10, show_top_terms=False, model=None, tfidf_vect=None)
+    show_cluster_examples(df, labels, k, num_examples=num_examples, show_top_terms=False, model=None, tfidf_vect=None)
 
     cluster_centers = kmeans.cluster_centers_
 
     fig = plt.figure(figsize=(10, 8))
-    ax = fig.gca(projection='3d')
+    # ax = fig.gca(projection='3d')
+    ax = fig.add_subplot(projection='3d')
 
     w = np.array(labels==0)
     x = np.array(labels==1)
@@ -162,6 +160,76 @@ def kmean_cluster_3d():
     ax.scatter(lsa_matrix[w,0],lsa_matrix[w,1],lsa_matrix[w,2],c="green",s=40,label="C4")
 
     plt.show()
+
+def transform_quarter_col(x):
+    if x in ['1', '2', '3', '4']: return x
+    elif x == "OT": return "5"
+    elif x == "2OT": return "6"
+    elif x == "3OT": return "7"
+    elif x == "4OT": return "8"
+
+    assert False, "Unknown quarter value"
+
+def transform_time_col(x):
+    return x.zfill(5)
+
+def get_scoring_play_bool_col(group):
+    group[['team_1_diff', 'team_2_diff']] = group[['team_1', 'team_2']].diff()
+
+    group['scoring_play_team_1'] = False
+    group['scoring_play_team_2'] = False
+
+    group['scoring_play_team_1'] = group.apply(lambda row: True if row['team_1_diff']>0 else False, axis=1)
+    group['scoring_play_team_2'] = group.apply(lambda row: True if row['team_2_diff']>0 else False, axis=1)
+
+    group['scoring_play'] = group[
+        ['scoring_play_team_1', 'scoring_play_team_2']
+    ].apply(lambda row: True if row['scoring_play_team_1']==True or row['scoring_play_team_2']==True else False, axis=1)
+
+    return group
+
+def tsne_cluster(df, num_examples):
+    print(f"Initial df size: {df.shape}")
+
+    # unique id cols: boxscore_id
+    df = df.groupby('boxscore_id').apply(get_scoring_play_bool_col).reset_index(drop=True)
+
+    # print(df[['boxscore_id', 'Quarter', 'Time', 'team_1', 'team_2', 'scoring_play']])
+
+    df = df.dropna(subset=['Quarter', 'Time'])
+
+    df['Quarter'] = df['Quarter'].apply(transform_quarter_col)
+    df['Time'] = df['Time'].apply(transform_time_col)
+    
+    df = df.sort_values(by=['Quarter', 'Time'], ascending=[True, False])
+
+    print(df)
+
+    tfidf_vect = TfidfVectorizer()
+    tfidf = tfidf_vect.fit_transform(df['play_text'].values).toarray()
+    
+    print(tfidf)
+
+    df = pd.DataFrame(tfidf, index=df['boxscore_id'], columns=tfidf_vect.get_feature_names_out())
+
+    print(df)
+
+    # init = "random"
+    # learning_rate = 200.0
+
+    # tsne = TSNE(init=init, learning_rate=learning_rate, random_state=0)
+
+    # X_tsne = tsne.fit_transform(X_fruits_normalized)
+
+    # plt.figure(figsize=(8, 6))
+    # plt.grid(alpha=0.2)
+    # plot_labelled_scatter(
+    #     X_tsne,
+    #     y_fruits,
+    #     ["apple", "mandarin", "orange", "lemon"],
+    #     title="Fruits dataset t-SNE",
+    # )
+    # plt.tight_layout()
 
 def sandbox():
     pass
@@ -234,5 +302,9 @@ def sandbox():
     # plt.show()
 
 if __name__ == "__main__":
+    df = get_pbp_dataframe().head(5000)
+    df = preprocess_play_text(df)
+
     # kmean_cluster_2d()
-    kmean_cluster_3d()
+    # kmeans_cluster_3d(df, num_examples=10)
+    tsne_cluster(df, num_examples=10)
