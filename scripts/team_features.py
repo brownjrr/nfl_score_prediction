@@ -1,8 +1,9 @@
+#%%
 import pandas as pd
 import random
 import re
 
-
+#%%
 # Define our feature engineering by grouping
 # 1. Coaches table
 
@@ -17,9 +18,9 @@ def prep_coaches_df(file_loc:str) -> pd.DataFrame:
     return df
 
 
-
+#%%
 # 2. Teams table
-def prep_teams_df(file_loc: str) -> pd.DataFrame:
+def prep_games_df(file_loc: str) -> pd.DataFrame:
     """
     Read in teams.csv to merge
     """
@@ -56,30 +57,63 @@ def prep_teams_df(file_loc: str) -> pd.DataFrame:
 
     # If there is no score, we can't have a prediction
     df[score_columns] = df[score_columns].apply(pd.to_numeric, errors='coerce')
-    df.dropna(subset=numeric_columns, inplace=True)
+    df.dropna(subset=score_columns, inplace=True)
 
+    # Clean up other numeric columns - fill with NA
+    # For offensive groups - get the average of the teams NA
+    df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
+    
+    # def_timeouts and off_timeouts have nulls (should be 0)
+    df.loc[df['off_timeout'].isna(), 'off_timeout'] = 0
+    df.loc[df['def_timeout'].isna(), 'def_timeout'] = 0
     return df
 
-
-
-
-
-# 5. Assign players to the teams
-def team_coach_merge(team_df: pd.DataFrame,
+#%%
+# 3. Assign coach to the teams
+def team_coach_merge(game_df: pd.DataFrame,
                      coach_df: pd.DataFrame
                     ) -> pd.DataFrame:
     """
     This takes 2 dataframes and merges them together to make a combined dataset
     for the teams
     args:
-        - team_df: output from the prep_teams_df
+        - game_df: output from the prep_games_df
+            - key: ['[home|opp]_team_id', 'year']
         - coach_df: output from the prep_coaches_df
+            - key: ['team', 'season']
 
     output:
         - merged dataframe based on coach information
     """
-    df = pd.merge(
-        team_df,
+    # Home team
+    tdf = pd.merge(
+        game_df,
         coach_df,
-        left_on = ['home_team_id', 
+        how='left',
+        left_on = ['home_team_id', 'year'],
+        right_on = ['team', 'season'],
+        suffixes=[None, '_home']
     )
+
+    # Opposing team
+    df = pd.merge(
+        tdf,
+        coach_df,
+        how='left',
+        left_on = ['opp_team_id', 'year'],
+        right_on = ['team', 'season'],
+        suffixes=[None, '_opp']
+    )
+
+    return df
+# %%
+if __name__ == '__main__':
+    coach_df = prep_coaches_df('data/coaches.csv')
+    game_df = prep_games_df('data/teams.csv')
+    game_df = team_coach_merge(game_df=game_df, coach_df=coach_df)
+    try:
+        game_df.drop(columns=['Unnamed: 0'])
+    except KeyError as e:
+        print(e)
+    print(f'Successfully processed {len(game_df)} games.')
+    game_df.to_csv('data/intermediate/games_df.csv',index=False)

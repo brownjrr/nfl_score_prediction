@@ -71,4 +71,7 @@ position_alias = {
      'TOG': 'UNKNOWN',
      'LD': 'UNKNOWN',
      'L': 'UNKNOWN',
-     'D': 'UNKNOWN'}
+     'D': 'UNKNOWN'
+}
+
+RANDOM_STATE=42

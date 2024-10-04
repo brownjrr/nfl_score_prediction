@@ -1,5 +1,7 @@
 import json
 import pandas as pd
+import random
+import re
 
 #TODO Consider making this file a top-level file and the constants nested
 with open('../data/position_alias.json', 'r') as file:
