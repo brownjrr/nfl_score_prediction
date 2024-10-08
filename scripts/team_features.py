@@ -1,7 +1,6 @@
 #%%
 import pandas as pd
-import random
-import re
+import json
 
 #%%
 # Define our feature engineering by grouping
@@ -14,9 +13,21 @@ def prep_coaches_df(file_loc:str) -> pd.DataFrame:
     """
     df = pd.read_csv(file_loc)
     df.columns = map(str.lower, df.columns)
-    df['team'] = df['team'].str.lower()
+    df['coach_index'] = df.index+1
+
+    # Add in team mappings associated with the URL reference
+    with open('data/abbrev_map.json', 'r') as file:
+        team_mappings = json.load(file)
+
+    df['team_url_id'] = df['team'].map(team_mappings.get)
     return df
 
+#%%
+def replace_na_mean(df_col: pd.Series):
+    """
+    Reads in a series and returns the average for the column
+    """
+    return df_col.mean()
 
 #%%
 # 2. Teams table
@@ -66,6 +77,51 @@ def prep_games_df(file_loc: str) -> pd.DataFrame:
     # def_timeouts and off_timeouts have nulls (should be 0)
     df.loc[df['off_timeout'].isna(), 'off_timeout'] = 0
     df.loc[df['def_timeout'].isna(), 'def_timeout'] = 0
+
+    # Convert categorical values to numbers
+    days_of_week = {
+        'Mon': 1,
+        'Sun': 2,
+        'Sat': 3,
+        'Fri': 4,
+        'Thu': 5,
+        'Wed': 6,
+        'Tue': 7
+    }
+
+    roof_types = {
+        'outdoors': 1,
+        'dome': 2,
+        'retractable roof (closed)': 3,
+        'retractable roof (open)': 4
+    }
+    df['day_int'] = df['day'].map(days_of_week.get)
+    df['roof_type_int'] = df['roof_type'].map(roof_types.get)
+    # A separate analysis shows most frequent roof type = 1 (outdoor)
+    df['roof_type_int'] = (df['roof_type_int']
+                           .fillna(1))
+    
+
+    # Replace NAs with the mean
+    na_cols = ['humidity_pct',
+               'wind_speed',
+               'temperature',
+               'duration',
+               'attendance'
+               ]
+    df[na_cols] = df[na_cols].fillna(df[na_cols].mean())
+    week_ind_map = {'1':1, '2':2, '3':3, '4': 4,
+                      '5':5, '6':6, '7':7, '8':8,
+                      '9':9, '10':10, '11':11, '12':12,
+                      '13':13, '14':14, '15':15, '16':16,
+                      '17':17, '18':18, 'Wild Card': 20,
+                      'Division': 21, 'Conf. Champ': 22,
+                      'SuperBowl': 23}
+    
+    df['week_ind'] = df['week'].map(week_ind_map.get)
+    
+
+    
     return df
 
 #%%
@@ -91,7 +147,7 @@ def team_coach_merge(game_df: pd.DataFrame,
         coach_df,
         how='left',
         left_on = ['home_team_id', 'year'],
-        right_on = ['team', 'season'],
+        right_on = ['team_url_id', 'season'],
         suffixes=[None, '_home']
     )
 
@@ -101,7 +157,7 @@ def team_coach_merge(game_df: pd.DataFrame,
         coach_df,
         how='left',
         left_on = ['opp_team_id', 'year'],
-        right_on = ['team', 'season'],
+        right_on = ['team_url_id', 'season'],
         suffixes=[None, '_opp']
     )
 
@@ -117,3 +173,4 @@ if __name__ == '__main__':
         print(e)
     print(f'Successfully processed {len(game_df)} games.')
     game_df.to_csv('data/intermediate/games_df.csv',index=False)
+# %%

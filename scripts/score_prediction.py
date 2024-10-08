@@ -10,11 +10,11 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 #import constants
 
 FEATURE_SELECTION = [
-    'week', 'day', 'OT', 'rec',
-    'away', 'attendance', 'roof_type',
+    'week_ind', 'day_int', 'OT',
+    'away', 'attendance', 'roof_type_int',
     'humidity_pct', 'wind_speed',
     'temperature', 'duration',
-    'season_games_played', 'coach', 'coach_opp'
+    'coach_index', 'coach_index_opp'
     ]
 
 #%%
