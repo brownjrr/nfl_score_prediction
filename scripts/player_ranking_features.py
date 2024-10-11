@@ -87,7 +87,7 @@ def player_position_group(df: pd.DataFrame,
             rank_col = 'opp_def_rank'
     else:
         raise TypeError
-        print(f'Switch values need to be 1 or 0')
+        print('Switch values need to be 1 or 0')
 
     grouped_df = (df
                   .groupby(['game_id', team_id_col])
@@ -174,9 +174,9 @@ def position_player_interaction(pos_A, rank_A, pos_B, rank_B, pos_p):
 
 if __name__ == '__main__':
     # First read in the games (output from step 1)
-    model_games_df = pd.read_csv('data/intermediate/games_df.csv')
-    players_df = pd.read_csv('data/intermediate/roster_df.csv')
-    prob_dict = probability_dictionary('data/interaction_prob.csv')
+    model_games_df = pd.read_csv('../data/intermediate/games_df.csv')
+    players_df = pd.read_csv('../data/intermediate/roster_df.csv')
+    prob_dict = probability_dictionary('../data/interaction_prob.csv')
     model_games_df['game_id'] = model_games_df[
         ['home_team_id',
         'opp_team_id',
@@ -283,3 +283,9 @@ if __name__ == '__main__':
 
     print(home_team_matchup.head())
     print(opp_team_matchup.head())
+# %%
+    home_team_summary = home_team_matchup['home_strength'].apply(lambda x: sum(x.values()))
+    opp_team_summary = opp_team_matchup['opp_strength'].apply(lambda x: sum(x.values()))
+    game_strength_summary = pd.merge(home_team_summary, opp_team_summary, on='game_id').reset_index()
+    game_strength_summary.to_csv('../data/intermediate/game_rank_matchup.csv', index=False)
+# %%
