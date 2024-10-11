@@ -136,5 +136,5 @@ if __name__ == '__main__':
                          on=['roster_year', 'player_id']
                         )
                 )
-    roster_df.to_csv('data/intermediate/roster_df.csv')
+    roster_df.to_csv('data/intermediate/roster_df.csv', index=False)
     print(f'Successfully processed {len(roster_df)} players for the roster.')
