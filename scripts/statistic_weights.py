@@ -12,6 +12,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import StandardScaler
+import os
+
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
+
+print(f"script_dir: {script_dir}")
 
 
 # Get game level statistic files
@@ -56,7 +63,7 @@ def make_season_col(x):
     return season
 
 def get_stats_table(save=False, verbose=False):
-    folder = "../data/"
+    folder = script_dir+"../data/"
     dfs = []
 
     for i in stats_files:
@@ -185,7 +192,7 @@ def get_stats_table(save=False, verbose=False):
         # print(f"{df_merged['inj_game_status'].unique()}")
 
     if save:
-        df_merged.to_csv("../data/raw_combined_player_stats.csv", index=False)
+        df_merged.to_csv(script_dir+"../data/raw_combined_player_stats.csv", index=False)
 
     return df_merged
 
@@ -316,42 +323,22 @@ def get_yearly_AV(get_missing=False):
     df = pd.DataFrame(data, columns=['player_id', 'table', 'season', 'AV'])
     df["season"] = df["season"].astype(int)
 
-    df.reset_index().to_csv("../data/raw_player_yearly_av.csv", index=False)
-
-    # df = df.groupby(["player_id", "season"]).agg({'AV': 'mean', 'table': list})
-
-    # print(df.sort_values(by=['AV'], ascending=False))
-    # print(f"players_with_no_data: {players_with_no_data}")
-    # print(f"players_with_data_no_av: {players_with_data_no_av}")
-
-    # df.reset_index().to_csv("../data/player_yearly_av.csv", index=False)
-    
-    # missing_dict = {
-    #     'no_data': players_with_no_data,
-    #     'data_no_av': players_with_data_no_av
-    # }
-
-    # with open("../data/missing_av_players.json", "w+") as f:
-    #     json.dump(missing_dict, f)
+    df.reset_index().to_csv(script_dir+"../data/raw_player_yearly_av.csv", index=False)
 
 def examine_raw_yearly_df():
-    df = pd.read_csv("../data/raw_player_yearly_av.csv")
+    df = pd.read_csv(script_dir+"../data/raw_player_yearly_av.csv")
 
     print(df)
 
     print(len(df['player_id'].unique()))
 
 def get_missing_player_data_from_raw_data():
-    df = pd.read_csv("../data/raw_player_yearly_av.csv")
+    df = pd.read_csv(script_dir+"../data/raw_player_yearly_av.csv")
 
     player_ids_with_data = set(df['player_id'].unique())
 
     dir_name = "C:/Users/Robert Brown/OneDrive/player_data_files/"
     all_player_ids= [f.path.split('/')[-1] for f in os.scandir(dir_name) if f.is_dir()]
-
-    # print(f"len(all_player_ids): {len(all_player_ids)}")
-    # print(f"all_player_ids: {all_player_ids}")
-    # print(f"player_ids_with_data: {player_ids_with_data}")
 
     no_data = []
     for i in all_player_ids:
@@ -364,7 +351,7 @@ def get_missing_player_data_from_raw_data():
     print(f'no_data: {no_data}')
 
 def process_raw_yearly_av_data():
-    df = pd.read_csv("../data/raw_player_yearly_av.csv")
+    df = pd.read_csv(script_dir+"../data/raw_player_yearly_av.csv")
 
     df['season'] = df['season'].astype(int)
     df['AV'] = pd.to_numeric(df['AV'], errors="coerce")
@@ -373,32 +360,29 @@ def process_raw_yearly_av_data():
 
     df = df.groupby(["player_id", "season"]).agg({'AV': 'mean', 'table': list}).reset_index()
 
-    print(df)
-    print(df.drop_duplicates(subset=["player_id"]))
-
-    df.to_csv("../data/player_yearly_av.csv", index=False)
+    df.to_csv(script_dir+"../data/player_yearly_av.csv", index=False)
 
 def process_raw_combined_player_stats():
-    df = pd.read_csv("../data/raw_combined_player_stats.csv")
+    df = pd.read_csv(script_dir+"../data/raw_combined_player_stats.csv")
 
     df = df.drop(columns={'date'}).groupby(["player_id", "season"]).sum().reset_index()
 
-    df.to_csv("../data/combined_player_stats.csv", index=False)
+    df.to_csv(script_dir+"../data/combined_player_stats.csv", index=False)
 
 def get_train_test_data_v1(start_year, end_year, use_standard_scaler=False):
-    av_df = pd.read_csv("../data/player_yearly_av.csv")
+    av_df = pd.read_csv(script_dir+"../data/player_yearly_av.csv")
 
     # filter by start and end year
     av_df = av_df[(av_df['season']>=start_year) & (av_df['season']<=end_year)]
     av_df = av_df.drop(columns=['table'])
 
-    stats_df = pd.read_csv("../data/combined_player_stats.csv")
+    stats_df = pd.read_csv(script_dir+"../data/combined_player_stats.csv")
 
-    player_pos_df = pd.read_csv("../data/player_positions.csv")
+    player_pos_df = pd.read_csv(script_dir+"../data/player_positions.csv")
     player_pos_df['position'] = player_pos_df['position'].str.split("-")
     player_pos_df = player_pos_df.explode('position')
 
-    pos_df = pd.read_csv("../data/positions.csv")
+    pos_df = pd.read_csv(script_dir+"../data/positions.csv")
 
     all_positions = [i for i in pos_df['adj_pos'].unique() if i not in ["UNKNOWN", "PR"]]
     
@@ -442,19 +426,19 @@ def get_train_test_data_v1(start_year, end_year, use_standard_scaler=False):
     return results
 
 def get_train_test_data_v2(start_year, end_year, use_standard_scaler=False):
-    av_df = pd.read_csv("../data/player_yearly_av.csv")
+    av_df = pd.read_csv(script_dir+"../data/player_yearly_av.csv")
 
     # filter by start and end year
     av_df = av_df[(av_df['season']>=start_year) & (av_df['season']<=end_year)]
     av_df = av_df.drop(columns=['table'])
 
-    stats_df = pd.read_csv("../data/combined_player_stats.csv")
+    stats_df = pd.read_csv(script_dir+"../data/combined_player_stats.csv")
 
-    player_pos_df = pd.read_csv("../data/player_positions.csv")
+    player_pos_df = pd.read_csv(script_dir+"../data/player_positions.csv")
     player_pos_df['position'] = player_pos_df['position'].str.split("-")
     player_pos_df = player_pos_df.explode('position')
 
-    pos_df = pd.read_csv("../data/positions.csv")
+    pos_df = pd.read_csv(script_dir+"../data/positions.csv")
 
     all_positions = [i for i in pos_df['adj_pos'].unique() if i not in ["UNKNOWN", "PR"]]
     
@@ -498,42 +482,6 @@ def get_train_test_data_v2(start_year, end_year, use_standard_scaler=False):
     }
         
     return results
-
-
-def linear_regression():
-    train_test_data = get_train_test_data(start_year=2013, end_year=2014)
-    results = dict()
-
-    for i in train_test_data:
-        print(f"POSITION: {i}")
-        X_train = train_test_data[i]['X_train']
-        X_test = train_test_data[i]['X_test']
-        y_train = train_test_data[i]['y_train']
-        y_test = train_test_data[i]['y_test']
-        lowest_mae = 1000
-
-        for fit_intercept in [True, False]:
-            print(f"fit_intercept: {fit_intercept}")
-            reg = LinearRegression(fit_intercept=fit_intercept).fit(X_train, y_train)
-            train_score = reg.score(X_train, y_train)
-            test_score = reg.score(X_test, y_test)
-
-            print(f"train_score: {train_score}")
-            print(f"test_score: {test_score}")
-
-            y_pred = reg.predict(X_test)
-
-            mae = mean_absolute_error(y_true=y_test, y_pred=y_pred)
-
-            print(f"MAE: {mae}")
-
-            if mae < lowest_mae:
-                coefficients = reg.coef_
-                features = reg.feature_names_in_
-                feature_importances = dict(zip(features, coefficients))
-
-                results[i] = feature_importances
-        print("=========================================")
 
 def ridge_regression_v1(verbose=False):
     results = dict()
@@ -627,7 +575,6 @@ def create_player_stat_weights_df(partion_by_position=False):
     if partion_by_position:
         weights_dict = ridge_regression_v1(verbose=False)
 
-        # print(f"weights_dict:\n{pd.DataFrame.from_dict(weights_dict, orient='index')}")
         data = []
 
         for pos in weights_dict:
@@ -639,10 +586,9 @@ def create_player_stat_weights_df(partion_by_position=False):
         
         df = pd.DataFrame(data, columns=['position', 'statistic', 'stat_source', 'weight'])
         
-        # print(df.to_string())
         print(df)
 
-        df.to_csv("../data/stat_weights_by_position.csv", index=False)
+        df.to_csv(script_dir+"../data/stat_weights_by_position.csv", index=False)
     else:
         weights_dict = ridge_regression_v2(verbose=False)
         
@@ -656,26 +602,16 @@ def create_player_stat_weights_df(partion_by_position=False):
         
         df = pd.DataFrame(data, columns=['statistic', 'stat_source', 'weight'])
         
-        # print(df.to_string())
         print(df)
 
-        df.to_csv("../data/stat_weights_overall.csv", index=False)
+        df.to_csv(script_dir+"../data/stat_weights_overall.csv", index=False)
 
 
 if __name__ == "__main__":
-    # get_stats_table(save=True, verbose=True)
-    # get_yearly_AV()
-    # examine_raw_yearly_df()
-    # get_missing_player_data_from_raw_data()
-    # process_raw_yearly_av_data()
-    # get_train_test_data(start_year=2013, end_year=2014)
-    # process_raw_combined_player_stats()
-    # linear_regression()
-    # ridge_regression_v1()
-    # res = get_train_test_data_v2(start_year=2013, end_year=2014)
-    # print(res)
-    # ridge_regression_v1(verbose=True)
-    # print("*****************************************************************************")
-    # ridge_regression_v2(verbose=True)
+    # get_yearly_AV(get_missing=False)
+    
+    get_stats_table(save=True, verbose=True)
+    process_raw_yearly_av_data()
+
     for i in [True, False]:
         create_player_stat_weights_df(partion_by_position=i)
