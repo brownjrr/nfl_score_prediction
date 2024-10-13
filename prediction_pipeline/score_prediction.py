@@ -11,6 +11,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import GridSearchCV
 from sklearn.compose import ColumnTransformer
+import shap
 
 # Bring in our constants
 #import constants
@@ -153,6 +154,9 @@ def train_random_forest(model_df: pd.DataFrame):
     X_features_train = X_train[FEATURE_SELECTION]
     X_features_test = X_test[FEATURE_SELECTION]
 
+    # Expose X_features_test for SHAP
+    X_features_test.to_csv('data/intermediate/x_test.csv', index=False)
+
     pipe = random_forest_pipeline_prediction()
 
     # Train our random forest
@@ -172,8 +176,36 @@ def train_random_forest(model_df: pd.DataFrame):
     print(f"Random Forest's best MAPE results: {best_model_mape}")
     return best_model
 
+def save_pickle_model(file_name: str, model) -> None:
+    """
+    Saves our model to the '/data/model/' location
+
+    ARGS:
+    ----
+        - file_name: should just the name of the file to save
+            - Can also accept full path
+        - model: trained model object (from pipeline)
+    """
+
+    if "/" in file_name:
+        print(f"Reverting to full path. Saving to {file_name}")
+        file_loc = file_name
+    else:
+        file_loc = 'data/model/' + file_name
+
+
+    if file_loc[-3:] != "pkl":
+        print("File name does not contain pkl extension. Adding it.")
+        file_loc += ".pkl"
+
+    with open(file_loc, 'wb') as f:
+        pickle.dump(model, f)
+
+    return None
+
 #%%
 if __name__ == '__main__':
+    import pickle
     game_df = model_data_read('data/intermediate/games_df.csv')
     game_match_df = add_matchup_rank(game_df, 'data/intermediate/game_rank_matchup.csv')
     #base_score = baseline_rfr(game_match_df)
@@ -181,4 +213,10 @@ if __name__ == '__main__':
     #      the model gives us a training score of {base_score}')
     
     best_tuned_random_forest = train_random_forest(model_df=game_match_df)
+    
+
+    # Save our models
+    save_pickle_model(file_name="random_forest_model.pkl",
+                      model=best_tuned_random_forest)
+
 # %%
