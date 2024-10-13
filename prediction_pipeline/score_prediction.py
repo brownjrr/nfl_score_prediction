@@ -4,14 +4,13 @@ import pandas as pd
 # Model libraries
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error
+from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import GridSearchCV
 from sklearn.compose import ColumnTransformer
-import shap
 
 # Bring in our constants
 #import constants
@@ -80,7 +79,8 @@ def baseline_rfr(model_df, random_state=42):
     
     return (score)
 
-def random_forest_pipeline_prediction():
+
+def model_pipeline_prediction(model_regressor):
     """
     Feeds in our  main model data into a pipeline for training
     and hyperparameter tuning, and the final output
@@ -113,7 +113,7 @@ def random_forest_pipeline_prediction():
 
 
     # Define our regressor
-    base_regressor = RandomForestRegressor(random_state=42)
+    base_regressor = model_regressor
     multi_target_regressor = MultiOutputRegressor(base_regressor)
     pipe = Pipeline(steps=[
         ("preprocessor", preprocess),
@@ -123,17 +123,19 @@ def random_forest_pipeline_prediction():
     return pipe
 
 
-def rfr_hyperparameter_tuning(pipe, x_train, y_train):
+def rfr_hyperparameter_tuning(x_train, y_train):
     """
     Takes in part of the pipe process and returns the best fit hyperparameters
     
     Args:
     ----
-        - pipe: part of the sklearn pipeline
         - x_train: the training data
         - y_train: the training target
         - returns: GridSearchCV object that is best fit to the data
     """
+
+    pipe = model_pipeline_prediction(RandomForestRegressor(random_state=42))
+    
     param_grid = {
         'regressor__estimator__n_estimators': [10, 100, 1000],
         'preprocessor__num__imputer__strategy': ['mean', 'median']
@@ -148,6 +150,39 @@ def rfr_hyperparameter_tuning(pipe, x_train, y_train):
 
     return grid_search.fit(x_train, y_train)
 
+
+def gb_hyperparameter_tuning(x_train, y_train):
+    """
+    Takes in part of the pipe process and returns the best fit hyperparameters
+    for a gradient boosted model
+    
+    Args:
+    ----
+        - pipe: part of the sklearn pipeline
+        - x_train: the training data
+        - y_train: the training target
+        - returns: GridSearchCV object that is best fit to the data
+    """
+
+    pipe = model_pipeline_prediction(GradientBoostingRegressor(random_state=42))
+
+    param_grid = {
+        'regressor__estimator__learning_rate': [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
+        'regressor__estimator__n_estimators': [10, 100, 1000],
+        'regressor__estimator__subsample': [0.4, 0.8, 1.0],
+        'preprocessor__num__imputer__strategy': ['mean', 'median']
+    }
+
+    grid_search = GridSearchCV(
+        estimator=pipe,
+        param_grid = param_grid,
+        cv = 5,
+        verbose = 2
+    )
+
+    return grid_search.fit(x_train, y_train)
+
+
 def train_random_forest(model_df: pd.DataFrame):
     X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
     
@@ -157,23 +192,54 @@ def train_random_forest(model_df: pd.DataFrame):
     # Expose X_features_test for SHAP
     X_features_test.to_csv('data/intermediate/x_test.csv', index=False)
 
-    pipe = random_forest_pipeline_prediction()
+    #pipe = random_forest_pipeline_prediction(model_type)
 
     # Train our random forest
-    print("Tuning model...")
-    best_model = rfr_hyperparameter_tuning(pipe, X_features_train, y_train)
+    print("Tuning Random Forest model...")
+    best_model = rfr_hyperparameter_tuning(X_features_train, y_train)
     print("Tuning complete")
+    print("-------------------\n")
 
     # Get the score on the test set
     y_pred = best_model.predict(X_features_test)
     best_model_mae = mean_absolute_error(y_test, y_pred)
-    best_model_mape = mean_absolute_percentage_error(y_test, y_pred)
+    best_model_rmse = root_mean_squared_error(y_test, y_pred)
     final_model = X_features_test.copy()
     final_model[['score_home_test', 'score_opp_test']] = y_test
     final_model[['score_home_pred', 'score_opp_pred']] = y_pred
     final_model.to_csv('data/output/random_forest_model_output.csv')
     print(f"Random Forest's best MAE results: {best_model_mae}")
-    print(f"Random Forest's best MAPE results: {best_model_mape}")
+    print(f"Random Forest's best MAPE results: {best_model_rmse}")
+    return best_model
+
+
+def train_gradient_boost(model_df: pd.DataFrame):
+    X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
+    
+    X_features_train = X_train[FEATURE_SELECTION]
+    X_features_test = X_test[FEATURE_SELECTION]
+
+    # Expose X_features_test for SHAP
+    X_features_test.to_csv('data/intermediate/x_test.csv', index=False)
+
+    #pipe = random_forest_pipeline_prediction(model_type)
+
+    # Train our random forest
+    print("Tuning Gradient Boosted model...")
+    best_model = gb_hyperparameter_tuning(X_features_train, y_train)
+    print("Tuning complete")
+    print("-------------------\n")
+
+    # Get the score on the test set
+    y_pred = best_model.predict(X_features_test)
+    best_model_mae = mean_absolute_error(y_test, y_pred)
+    best_model_rmse = root_mean_squared_error(y_test, y_pred)
+    final_model = X_features_test.copy()
+    final_model[['score_home_test', 'score_opp_test']] = y_test
+    final_model[['score_home_pred', 'score_opp_pred']] = y_pred
+    final_model.to_csv('data/output/gradient_boosted_model_output.csv')
+    print(f"Gradient Boosted's best MAE results: {best_model_mae}")
+    print(f"Gradient Boosted's best RMSE results: {best_model_rmse}")
     return best_model
 
 def save_pickle_model(file_name: str, model) -> None:
@@ -213,10 +279,13 @@ if __name__ == '__main__':
     #      the model gives us a training score of {base_score}')
     
     best_tuned_random_forest = train_random_forest(model_df=game_match_df)
+    best_tuned_gradient_boost = train_gradient_boost(model_df=game_match_df)
     
 
     # Save our models
     save_pickle_model(file_name="random_forest_model.pkl",
                       model=best_tuned_random_forest)
 
+    save_pickle_model(file_name="gradient_boosted_model.pkl",
+                      model=best_tuned_gradient_boost)
 # %%
