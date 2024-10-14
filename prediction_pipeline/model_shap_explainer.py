@@ -17,6 +17,6 @@ def read_model(file_name: str):
 
 rfr = read_model('random_forest_model.pkl')
 x_test = pd.read_csv('data/intermediate/x_test.csv')
-explainer = shap.Explainer(rfr)
+explainer = shap.TreeExplainer()
 shap_values = explainer.shap_values(x_test)
 shap.summary_plot(shap_values)
