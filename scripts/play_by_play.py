@@ -4,6 +4,13 @@ import glob
 import warnings
 import re
 import spacy
+import os
+
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
+
+print(f"script_dir: {script_dir}")
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -24,15 +31,15 @@ for i in position_type_dict:
 
 print(f"inv_position_type_dict:\n{inv_position_type_dict}")
 
-with open("../data/abbrev_map.json", "r") as f:
-    abbrev_map = json.load(f)
-
-print(abbrev_map)
-
 def combine_jsons():
     """
     combining all play by play data (json to pandas df)
     """
+    with open(script_dir+"../data/abbrev_map.json", "r") as f:
+        abbrev_map = json.load(f)
+
+    print(abbrev_map)
+
     column_len_set = set()
     column_set = set()
     dfs = []
@@ -94,18 +101,18 @@ def combine_jsons():
     print(f"Min Date: {df['event_date'].min()} - Max Date: {df['event_date'].max()}")
     print(df)
 
-    df.to_csv("../data/play_by_play.csv", index=False)
+    df.to_csv(script_dir+"../data/play_by_play.csv", index=False)
 
     # print(f"column_len_set: {column_len_set}")
     # print(f"column_set: {column_set}")
     # print(f"column_set length: {len(column_set)}")
 
 def get_play_by_play_df():
-    df = pd.read_csv("../data/play_by_play.csv")
+    df = pd.read_csv(script_dir+"../data/play_by_play.csv")
     return df
 
 def get_player_pos_dict():
-    df = pd.read_csv("../data/players.csv")
+    df = pd.read_csv(script_dir+"../data/players.csv")
     df['position'] = df['position'].fillna("POSITION_NOT_FOUND")
 
     return df[['player_id', 'position']].set_index("player_id").to_dict()['position']
@@ -144,37 +151,6 @@ def preprocess_play_text(df):
     df = df[~((df['play_text'].str.contains("POSITION_NOT_FOUND")) | (df['play_text'].str.contains("PLAYER_NOT_FOUND")))]
 
     return df
-
-def get_all_interaction_probabilities():
-    offensive_positions = pd.Series([i for i in inv_position_type_dict if inv_position_type_dict[i]=="offense"])
-    offensive_positions = offensive_positions.to_frame(name="pos_1")
-
-    defensive_positions = pd.Series([i for i in inv_position_type_dict if inv_position_type_dict[i]=="defense"])
-    defensive_positions = defensive_positions.to_frame(name="pos_2")
-
-    df = pd.merge(offensive_positions, defensive_positions, how='cross')
-    temp_df = df[['pos_2', 'pos_1']].rename(columns={'pos_1': 'pos_2', 'pos_2': 'pos_1'})
-    df = pd.concat([df, temp_df])
-
-    pbp_df = get_play_by_play_df()
-
-    def get_interaction_prob(row):
-        print(f"Position 1: {row['pos_1']} | Position 2: {row['pos_2']}")
-        
-        pos1 = row['pos_1']
-        pos2 = row['pos_2']
-
-        temp_df = pbp_df.groupby(['Quarter', 'Time', 'Down', 'ToGo', 'Location', 'link_x', "team_1", "team_2"])['position'].apply(list).reset_index()
-        pos1_rows = temp_df[[(pos1 in x) for x in temp_df.position]].shape[0]
-        num_p1_p2_rows = temp_df[[(pos1 in x) and (pos2 in x) for x in temp_df.position]].shape[0]
-        
-        return num_p1_p2_rows / pos1_rows
-
-    df['interaction_prob'] = df.apply(lambda row: get_interaction_prob(row), axis=1)
-    
-    print(df)
-
-    df.to_csv("../data/interaction_prob.csv", index=False)
 
 def transform_play_test(x):
     penalty_play = False
@@ -222,24 +198,31 @@ def off_def_players_interactions(x):
     return (off_player, def_players)
 
 def get_player_interaction_tuples():
+    print("RUNNING get_player_interaction_tuples()")
+
     df = get_play_by_play_df()
+
 
     # dropping rows without Details
     df = df[~df['Detail'].isna()]
 
+    print("Calling preprocess_play_text()")
     df = preprocess_play_text(df)
 
+    print("Calling transform_play_test()")
     df['players_in_text'] = df['play_text'].apply(transform_play_test)
     df[['players_in_text', 'penalty_on_play', 'num_sentences']] = pd.DataFrame(df['players_in_text'].tolist(), index=df.index)
 
     # sort by num_sentences
     df = df.sort_values(by=['num_sentences'], ascending=False)
 
+    print("Exploding df")
     # explode play_text column to get one row for each sentence in a play's description
     df = df.explode('players_in_text')
 
     df['num_players'] = df['players_in_text'].str.len()
 
+    print("Calling off_def_players_interactions()")
     df['off_def_interactions'] = df['players_in_text'].apply(off_def_players_interactions)
     df[['offensive_player', 'defensive_players']] = pd.DataFrame(df['off_def_interactions'].tolist(), index=df.index)
     df['num_players'] = df['players'].apply(lambda x: len(re.findall(r"\'.*?\'", x)))
@@ -260,6 +243,8 @@ def get_player_interaction_tuples():
                     seen_dict[val] += 1
 
         return seen_dict
+    
+    print("Groupby and Apply")
 
     results = df.groupby(['offensive_player']).apply(func)
     results = results.to_frame(name='data')
@@ -292,12 +277,9 @@ def get_player_interaction_tuples():
 
     print(prob_df)
 
-    prob_df.to_csv("../data/interaction_prob.csv", index=True)
+    prob_df.to_csv(script_dir+"../data/interaction_prob.csv", index=True)
 
 
 if __name__ == "__main__":
     # combine_jsons()
-    # get_play_by_play_df()
-    # get_interaction_prob(get_play_by_play_df(), "RB", "DB") # deprecated
-    # get_all_interaction_probabilities() # deprecated
     get_player_interaction_tuples()

@@ -11,6 +11,7 @@ LILB,LB,defense
 ILB,LB,defense
 MLB,LB,defense
 OLB,LB,defense
+OOLB,LB,defense
 LOLB,LB,defense
 SLB,LB,defense
 WLB,LB,defense
@@ -62,6 +63,7 @@ NG,DL,defense
 RDE,DL,defense
 RDT,DL,defense
 DE,DL,defense
+EDGE,DL,defense
 PR,PR,special_teams
 KB,UNKNOWN,
 D,UNKNOWN,
