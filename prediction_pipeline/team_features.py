@@ -22,6 +22,24 @@ def prep_coaches_df(file_loc:str) -> pd.DataFrame:
     df['team_url_id'] = df['team'].map(team_mappings.get)
     return df
 
+def read_in_coach_ratings(file_loc:str) -> pd.DataFrame:
+    """
+    Reads in the output from coach_rating model
+    """
+    df = pd.read_csv(file_loc)
+    df = df.rename(columns={'rating': 'coach_rating'})
+    COACH_COLUMNS = [
+        'coach_name',
+        'coach_id',
+        'team_id',
+        'season',
+        'event_date',
+        'week',
+        'coach_rating'
+        ]
+    return df[COACH_COLUMNS]
+
+
 #%%
 def replace_na_mean(df_col: pd.Series):
     """
@@ -146,8 +164,8 @@ def team_coach_merge(game_df: pd.DataFrame,
         game_df,
         coach_df,
         how='left',
-        left_on = ['home_team_id', 'year'],
-        right_on = ['team_url_id', 'season'],
+        left_on = ['home_team_id', 'event_date'],
+        right_on = ['team_id', 'event_date'],
         suffixes=[None, '_home']
     )
 
@@ -156,15 +174,16 @@ def team_coach_merge(game_df: pd.DataFrame,
         tdf,
         coach_df,
         how='left',
-        left_on = ['opp_team_id', 'year'],
-        right_on = ['team_url_id', 'season'],
+        left_on = ['opp_team_id', 'event_date'],
+        right_on = ['team_id', 'event_date'],
         suffixes=[None, '_opp']
     )
 
     return df
 # %%
 if __name__ == '__main__':
-    coach_df = prep_coaches_df('data/coaches.csv')
+    #coach_df = prep_coaches_df('data/coaches.csv')
+    coach_df = read_in_coach_ratings('data/coach_ratings.csv')
     game_df = prep_games_df('data/teams.csv')
     game_df = team_coach_merge(game_df=game_df, coach_df=coach_df)
     try:

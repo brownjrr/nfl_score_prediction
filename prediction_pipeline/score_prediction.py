@@ -19,7 +19,7 @@ FEATURE_SELECTION = [
     'away', 'attendance', 'roof_type',
     'humidity_pct', 'wind_speed',
     'temperature', 'duration',
-    'coach_index', 'coach_index_opp',
+    'coach_rating', 'coach_rating_opp',
     'home_strength', 'opp_strength'
     ]
 
