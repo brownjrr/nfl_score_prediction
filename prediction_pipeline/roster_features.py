@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import re
 
-#TODO Consider making this file a top-level file and the constants nested
+
 def json_loader(file_loc:str) -> dict[str: str]:
     """
     Reads in some json files
@@ -117,6 +117,28 @@ def per_game_roster(file_loc: str) -> pd.DataFrame:
     return df[['team_id', 'player_id', 'position', 
                'position_alias', 'event_date', 
                'roster_year', 'position_cat']]
+
+
+# 5. Read in model player_ratings
+def player_ratings_addition(file_loc: str) -> pd.DataFrame:
+    """
+    Player Ratings is the output from an intermediate model
+    to determine the final rating of a player.
+
+    Args:
+    -----
+        - file_loc: location for the player_ratings file
+
+    Output:
+    -------
+        - Dataframe that adds in position category to player ratings
+    """
+
+    df = pd.read_csv(file_loc)
+    df['position_cat'] = df['position'].map(position_category.get)
+    df = df.rename(columns={'date': 'event_date', 'team_abbr': 'team_id'})
+
+    return df
     
 # %%
 if __name__ == '__main__':
