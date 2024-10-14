@@ -2,9 +2,8 @@
 import pandas as pd
 
 # Model libraries
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -167,9 +166,9 @@ def gb_hyperparameter_tuning(x_train, y_train):
     pipe = model_pipeline_prediction(GradientBoostingRegressor(random_state=42))
 
     param_grid = {
-        'regressor__estimator__learning_rate': [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2],
-        'regressor__estimator__n_estimators': [10, 100, 1000],
-        'regressor__estimator__subsample': [0.4, 0.8, 1.0],
+        'regressor__estimator__learning_rate': [0.025, 0.075,0.2],
+        'regressor__estimator__n_estimators': [100, 1000],
+        'regressor__estimator__subsample': [0.5, 1.0],
         'preprocessor__num__imputer__strategy': ['mean', 'median']
     }
 
@@ -209,7 +208,7 @@ def train_random_forest(model_df: pd.DataFrame):
     final_model[['score_home_pred', 'score_opp_pred']] = y_pred
     final_model.to_csv('data/output/random_forest_model_output.csv')
     print(f"Random Forest's best MAE results: {best_model_mae}")
-    print(f"Random Forest's best MAPE results: {best_model_rmse}")
+    print(f"Random Forest's best RMSE results: {best_model_rmse}")
     return best_model
 
 
