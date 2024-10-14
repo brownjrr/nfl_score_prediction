@@ -1,2 +1,5 @@
 pandas
 timeout-decorator
+scikit-learn
+matplotlib
+seaborn
