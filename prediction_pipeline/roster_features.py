@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import re
 
-#TODO Consider making this file a top-level file and the constants nested
+
 def json_loader(file_loc:str) -> dict[str: str]:
     """
     Reads in some json files
@@ -117,6 +117,28 @@ def per_game_roster(file_loc: str) -> pd.DataFrame:
     return df[['team_id', 'player_id', 'position', 
                'position_alias', 'event_date', 
                'roster_year', 'position_cat']]
+
+
+# 5. Read in model player_ratings
+def player_ratings_addition(file_loc: str) -> pd.DataFrame:
+    """
+    Player Ratings is the output from an intermediate model
+    to determine the final rating of a player.
+
+    Args:
+    -----
+        - file_loc: location for the player_ratings file
+
+    Output:
+    -------
+        - Dataframe that adds in position category to player ratings
+    """
+
+    df = pd.read_csv(file_loc)
+    df['position_cat'] = df['position'].map(position_category.get)
+    df = df.rename(columns={'date': 'event_date', 'team_abb': 'team_id', 'rating': 'player_rating'})
+
+    return df
     
 # %%
 if __name__ == '__main__':
@@ -125,16 +147,18 @@ if __name__ == '__main__':
     game_roster = per_game_roster('data/game_starters_all.csv')
 
     # Assign the player's yearly value to the main roster
-    roster_df = (game_roster
-                 .merge(
-                     yearly_roster[[
-                         'roster_year',
-                         'player_id',
-                         'approx_value'
-                         ]],
-                         how='left',
-                         on=['roster_year', 'player_id']
-                        )
-                )
+    #roster_df = (game_roster
+    #             .merge(
+    #                 yearly_roster[[
+    #                     'roster_year',
+    #                     'player_id',
+    #                     'approx_value'
+    #                     ]],
+    #                     how='left',
+    #                     on=['roster_year', 'player_id']
+    #                    )
+    #            )
+    
+    roster_df = player_ratings_addition('data/player_ratings.csv')
     roster_df.to_csv('data/intermediate/roster_df.csv', index=False)
     print(f'Successfully processed {len(roster_df)} players for the roster.')
