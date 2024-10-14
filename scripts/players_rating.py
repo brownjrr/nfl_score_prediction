@@ -286,6 +286,6 @@ with open(f"{filepath}/custom_weights.json", 'r') as file:
 
 
 
-pr = players_rating(player_offense, player_defense, player_kicking, player_returns, snap_counts,rosters, injuries, starters_df,games_info,team_dict,team_dict_short,pos_alias_dict,stat_weights,stat_weights_overall,custom_weights_dict,pos_weight=False,overall=True)
+pr = players_rating(player_offense, player_defense, player_kicking, player_returns, snap_counts,rosters, injuries, starters_df,games_info,team_dict,team_dict_short,pos_alias_dict,stat_weights,stat_weights_overall,custom_weights_dict,pos_weight=True,overall=True)
 
 pr.to_csv(f"{filepath}/player_ratings.csv", index=False)
