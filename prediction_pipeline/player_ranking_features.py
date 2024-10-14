@@ -34,16 +34,16 @@ def home_away_games(df: pd.DataFrame,
 
     loc_players_off = loc_players.loc[loc_players['position_cat'] == 'offense']
     loc_players_def = loc_players.loc[loc_players['position_cat'] == 'defense']
-    print(f'Offense is of type {type(loc_players_off)}')
-    print(f'Defense is of type {type(loc_players_def)}')
+    #print(f'Offense is of type {type(loc_players_off)}')
+    #print(f'Defense is of type {type(loc_players_def)}')
 
     return (loc_players_off, loc_players_def)
 
-def rename_position_alias(df: pd.DataFrame, new_column: str) -> pd.DataFrame:
+def rename_position(df: pd.DataFrame, new_column: str) -> pd.DataFrame:
     """
-    Simply renames the position_alias column
+    Simply renames the position column
     """
-    return df.rename(columns={'position_alias': new_column})
+    return df.rename(columns={'position': new_column})
 
 
 # Determine the players, positions, and scores, per game
@@ -93,14 +93,14 @@ def player_position_group(df: pd.DataFrame,
                   .groupby(['game_id', team_id_col])
                   .agg({
                       'player_id': list,
-                      'position_alias': list,
-                      'approx_value': list
+                      'position': list,
+                      'player_rating': list
                   })
                 )
     grouped_ranking = (grouped_df
                        .rename(columns={
                            'player_id': player_col,
-                           'approx_value': rank_col
+                           'player_rating': rank_col
                        })
                     )
     
@@ -174,9 +174,9 @@ def position_player_interaction(pos_A, rank_A, pos_B, rank_B, pos_p):
 
 if __name__ == '__main__':
     # First read in the games (output from step 1)
-    model_games_df = pd.read_csv('../data/intermediate/games_df.csv')
-    players_df = pd.read_csv('../data/intermediate/roster_df.csv')
-    prob_dict = probability_dictionary('../data/interaction_prob.csv')
+    model_games_df = pd.read_csv('data/intermediate/games_df.csv')
+    players_df = pd.read_csv('data/intermediate/roster_df.csv')
+    prob_dict = probability_dictionary('data/interaction_prob.csv')
     model_games_df['game_id'] = model_games_df[
         ['home_team_id',
         'opp_team_id',
@@ -224,19 +224,19 @@ if __name__ == '__main__':
     )
 
     ## Rename columns for merge
-    home_off_players_positional_ranking = rename_position_alias(
+    home_off_players_positional_ranking = rename_position(
         home_off_players_positional_ranking,
         'off_position'
         )
-    home_def_players_positional_ranking = rename_position_alias(
+    home_def_players_positional_ranking = rename_position(
         home_def_players_positional_ranking,
         'def_position'
         )
-    opp_off_players_positional_ranking = rename_position_alias(
+    opp_off_players_positional_ranking = rename_position(
         opp_off_players_positional_ranking,
         'off_position'
         )
-    opp_def_players_positional_ranking = rename_position_alias(
+    opp_def_players_positional_ranking = rename_position(
         opp_def_players_positional_ranking,
         'def_position'
         )
@@ -287,5 +287,5 @@ if __name__ == '__main__':
     home_team_summary = home_team_matchup['home_strength'].apply(lambda x: sum(x.values()))
     opp_team_summary = opp_team_matchup['opp_strength'].apply(lambda x: sum(x.values()))
     game_strength_summary = pd.merge(home_team_summary, opp_team_summary, on='game_id').reset_index()
-    game_strength_summary.to_csv('../data/intermediate/game_rank_matchup.csv', index=False)
+    game_strength_summary.to_csv('data/intermediate/game_rank_matchup.csv', index=False)
 # %%

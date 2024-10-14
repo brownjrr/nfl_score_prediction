@@ -136,7 +136,7 @@ def player_ratings_addition(file_loc: str) -> pd.DataFrame:
 
     df = pd.read_csv(file_loc)
     df['position_cat'] = df['position'].map(position_category.get)
-    df = df.rename(columns={'date': 'event_date', 'team_abbr': 'team_id'})
+    df = df.rename(columns={'date': 'event_date', 'team_abb': 'team_id', 'rating': 'player_rating'})
 
     return df
     
@@ -147,17 +147,18 @@ if __name__ == '__main__':
     game_roster = per_game_roster('data/game_starters_all.csv')
 
     # Assign the player's yearly value to the main roster
-    roster_df = (game_roster
-                 .merge(
-                     yearly_roster[[
-                         'roster_year',
-                         'player_id',
-                         'approx_value'
-                         ]],
-                         how='left',
-                         on=['roster_year', 'player_id']
-                        )
-                )
-    #roster_df.to_csv('data/intermediate/roster_df.csv', index=False)
+    #roster_df = (game_roster
+    #             .merge(
+    #                 yearly_roster[[
+    #                     'roster_year',
+    #                     'player_id',
+    #                     'approx_value'
+    #                     ]],
+    #                     how='left',
+    #                     on=['roster_year', 'player_id']
+    #                    )
+    #            )
+    
     roster_df = player_ratings_addition('data/player_ratings.csv')
+    roster_df.to_csv('data/intermediate/roster_df.csv', index=False)
     print(f'Successfully processed {len(roster_df)} players for the roster.')

@@ -272,6 +272,8 @@ def save_pickle_model(file_name: str, model) -> None:
 if __name__ == '__main__':
     import pickle
     game_df = model_data_read('data/intermediate/games_df.csv')
+    # Filter to match our player rating model
+    game_df = game_df.loc[game_df['season'] >= 2015]
     game_match_df = add_matchup_rank(game_df, 'data/intermediate/game_rank_matchup.csv')
     #base_score = baseline_rfr(game_match_df)
     #print(f'Without any team player indicators, \
