@@ -2,15 +2,21 @@ import pandas as pd
 import numpy as np
 import re
 import random
+import os
 
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
+
+print(f"script_dir: {script_dir}")
 
 def get_pbp_dataframe():
-    df = pd.read_csv("../data/play_by_play.csv").drop_duplicates(subset=['Detail']).dropna(subset=['Detail'])
+    df = pd.read_csv(script_dir+"../data/play_by_play.csv").drop_duplicates(subset=['Detail']).dropna(subset=['Detail'])
 
     return df
 
 def get_player_pos_dict():
-    df = pd.read_csv("../data/players.csv")
+    df = pd.read_csv(script_dir+"../data/players.csv")
     df['position'] = df['position'].fillna("POSITION_NOT_FOUND")
 
     return df[['player_id', 'position']].set_index("player_id").to_dict()['position']
@@ -265,7 +271,7 @@ def assign_play_type_info():
     print(df)
     print(f"Ending Shape: {df.shape}")
 
-    df.to_csv("../data/play_by_play_extended.csv", index=False)
+    df.to_csv(script_dir+"../data/play_by_play_extended.csv", index=False)
 
 
 if __name__ == "__main__":

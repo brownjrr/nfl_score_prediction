@@ -1,4 +1,22 @@
-./data/stat_weights_by_position.csv ./data/stat_weights_overall.csv: ./scripts/play_by_play.py
+./data/player_ratings.csv: ./scripts/players_rating.py ./data/stat_weights_by_position.csv ./data/stat_weights_overall.csv
+	python ./scripts/players_rating.py
+	
+./data/coach_ratings.csv: ./scripts/coaches_rating.py ./data/game_level_coach_data_extended.csv
+	python ./scripts/coaches_rating.py
+
+./data/game_level_coach_data_extended.csv: ./scripts/coach_stats_augment.py ./data/play_by_play_extended_v2.csv ./data/game_level_coach_data.csv
+	python ./scripts/coach_stats_augment.py
+
+./data/play_by_play_extended_v2.csv: ./scripts/play_by_play_augment.py ./data/game_level_coach_data.csv ./data/play_by_play_extended.csv
+	python ./scripts/play_by_play_augment.py
+
+./data/play_by_play_extended.csv: ./scripts/extract_features_play_by_play.py
+	python ./scripts/extract_features_play_by_play.py
+
+./data/game_level_coach_data.csv: ./scripts/boxscores.py
+	python ./scripts/boxscores.py
+
+./data/stat_weights_by_position.csv ./data/stat_weights_overall.csv: ./scripts/statistic_weights.py
 	python ./scripts/statistic_weights.py
 
 ./data/interaction_prob.csv: ./scripts/play_by_play.py ./data/play_by_play.csv ./data/players.csv

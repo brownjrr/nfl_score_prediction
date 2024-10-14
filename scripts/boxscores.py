@@ -6,7 +6,13 @@ import time
 import os
 import multiprocessing as mp
 from dateutil.parser import parse
+import os
 
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
+
+print(f"script_dir: {script_dir}")
 
 def get_boxscores_html():
     base_dir = "C:/Users/Robert Brown/OneDrive/"
@@ -113,7 +119,7 @@ def create_coaches_dataframe(boxscore_folder):
 
     print(df)
 
-    df.to_csv("../data/raw_game_level_coach_data.csv", index=False)
+    df.to_csv(script_dir+"../data/raw_game_level_coach_data.csv", index=False)
 
 def convert_date_to_season(x):
     if x.month <= 6:
@@ -122,7 +128,7 @@ def convert_date_to_season(x):
         return x.year
 
 def process_game_level_coach_data():
-    df = pd.read_csv("../data/raw_game_level_coach_data.csv")
+    df = pd.read_csv(script_dir+"../data/raw_game_level_coach_data.csv")
 
     # get coach ids
     df['coach_id'] = df['coach_link'].str.split("/", expand=False).str[-1].str.replace(".htm", "")
@@ -135,7 +141,7 @@ def process_game_level_coach_data():
 
     print(df)
 
-    df.to_csv("../data/game_level_coach_data.csv", index=False)
+    df.to_csv(script_dir+"../data/game_level_coach_data.csv", index=False)
 
 if __name__ == '__main__':
     # get_boxscores_html()

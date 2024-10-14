@@ -1,6 +1,12 @@
 import pandas as pd
 import re
+import os
 
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
+
+print(f"script_dir: {script_dir}")
 
 def get_position_type_dicts():
     position_type_dict = {
@@ -51,7 +57,7 @@ def prepocess_text(x, player_pos_dict, inv_pos_type_dict, adj_pos_dict):
     return x
 
 def get_player_pos_dict():
-    df = pd.read_csv("../data/player_positions.csv")
+    df = pd.read_csv(script_dir+"../data/player_positions.csv")
     df = df.drop_duplicates(subset=['player_id'])
 
     return df.set_index("player_id").to_dict()['position']
@@ -59,15 +65,15 @@ def get_player_pos_dict():
 def preprocess_play_text(df):
     inv_pos_type_dict = get_position_type_dicts()[1]
     player_pos_dict = get_player_pos_dict()
-    adj_pos_dict = pd.read_csv("../data/positions.csv")[['position', 'adj_pos']].set_index(['position']).to_dict()['adj_pos']
+    adj_pos_dict = pd.read_csv(script_dir+"../data/positions.csv")[['position', 'adj_pos']].set_index(['position']).to_dict()['adj_pos']
 
     df['tokenized_play_text'] = df['Detail'].apply(prepocess_text, args=(player_pos_dict,inv_pos_type_dict,adj_pos_dict,),)
 
     return df
 
 def add_coach_data_play_by_play():
-    df = pd.read_csv("../data/play_by_play_extended.csv")
-    coach_df = pd.read_csv("../data/game_level_coach_data.csv")
+    df = pd.read_csv(script_dir+"../data/play_by_play_extended.csv")
+    coach_df = pd.read_csv(script_dir+"../data/game_level_coach_data.csv")
     coach_dict = coach_df[['boxscore_id', 'team_id', 'coach_id']].set_index(['boxscore_id', 'team_id']).to_dict()['coach_id']
     
     def get_coach(row, team1=True):
@@ -94,7 +100,7 @@ def convert_date_to_season(x):
         return x.year
 
 def get_roster_data():
-    df = pd.read_csv("../data/rosters.csv")
+    df = pd.read_csv(script_dir+"../data/rosters.csv")
     df['team_id'] = df['team_link'].str.split("/", expand=False).str[-2]
 
     return df
@@ -152,7 +158,7 @@ def add_offensive_team_play_by_play():
 
     print(df)
 
-    df.to_csv("../data/play_by_play_extended_v2.csv", index=False)
+    df.to_csv(script_dir+"../data/play_by_play_extended_v2.csv", index=False)
 
 if __name__ == "__main__":
     add_offensive_team_play_by_play()
