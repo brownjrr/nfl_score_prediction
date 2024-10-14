@@ -4,6 +4,11 @@ import json
 import os
 
 
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
+
+print(f"script_dir: {script_dir}")
+
 # Weighting factors for game outcomes and previous rating influence
 outcome_factor = {'W': 1.05, 'L': 0.98, 'T': 0}
 #outcome_factor = {'won': 0.25, 'loss': -0.25, 'tie': 0}
@@ -135,7 +140,10 @@ def merge_data_for_event_date(event_date, offense_stats, defense_stats, kicking_
     merged_stats["game_status"] = merged_stats["game_status"].fillna('Available')
 
     # Set Pandas option to handle the FutureWarning
-    pd.set_option('future.no_silent_downcasting', True)
+    try:
+        pd.set_option('future.no_silent_downcasting', True)
+    except Exception as e:
+        pass
 
     # Join with the roster to get player positions
     merged_data = pd.merge(merged_stats, roster_data[['player_id','team_abb','years_played','season']], on=['player_id','team_abb','season'], how='left')
@@ -233,7 +241,10 @@ def players_rating(player_offense, player_defense, player_kicking, player_return
     # Apply ratings to all players, incorporating win/loss and previous ratings
     player_ratings_df = pd.DataFrame()
 
-    for event_date in unique_game_dates:
+    for i, event_date in enumerate(unique_game_dates):
+        if i % 100 == 0:
+            print(f"Step Number {i} of {len(unique_game_dates)}")
+        
         merged_data_for_date = merge_data_for_event_date(event_date, player_offense, player_defense, player_kicking, player_returns, snap_counts,rosters, injuries, starters_df)
         merged_data_for_date['rating'] = merged_data_for_date.apply(lambda row: calculate_player_rating_with_previous(row, previous_ratings, stat_weights ,stat_weights_overall,weight_dict,pos_weight=pos_weight,overall=overall), axis=1)
         previous_ratings.update(merged_data_for_date.set_index('player_id')['rating'].to_dict())
@@ -246,32 +257,35 @@ def players_rating(player_offense, player_defense, player_kicking, player_return
 
 
 # files used for player rating calculation
+filepath = f"{script_dir}../data"
 
-# injuries = pd.read_csv(f"{filepath}/injuries_all.csv")
-# rosters = pd.read_csv(f"{filepath}/Rosters.csv")
-# games_info = pd.read_csv(f"{filepath}/games_info_all.csv")
-# starters_df = pd.read_csv(f"{filepath}/game_starters_all.csv")
-# snap_counts = pd.read_csv(f"{filepath}/snap_counts_all.csv")
-# player_offense = pd.read_csv(f"{filepath}/player_offense_all.csv")
-# player_defense = pd.read_csv(f"{filepath}/player_defense_all.csv")
-# player_returns = pd.read_csv(f"{filepath}/player_returns_all.csv")
-# player_kicking = pd.read_csv(f"{filepath}/player_kicking_all.csv")
-# stat_weights = pd.read_csv(f"{filepath}/stat_weights_by_position.csv")
-# stat_weights_overall = pd.read_csv(f"{filepath}/stat_weights_overall.csv")
+injuries = pd.read_csv(f"{filepath}/injuries_all.csv")
+rosters = pd.read_csv(f"{filepath}/Rosters.csv")
+games_info = pd.read_csv(f"{filepath}/games_info_all.csv")
+starters_df = pd.read_csv(f"{filepath}/game_starters_all.csv")
+snap_counts = pd.read_csv(f"{filepath}/snap_counts_all.csv")
+player_offense = pd.read_csv(f"{filepath}/player_offense_all.csv")
+player_defense = pd.read_csv(f"{filepath}/player_defense_all.csv")
+player_returns = pd.read_csv(f"{filepath}/player_returns_all.csv")
+player_kicking = pd.read_csv(f"{filepath}/player_kicking_all.csv")
+stat_weights = pd.read_csv(f"{filepath}/stat_weights_by_position.csv")
+stat_weights_overall = pd.read_csv(f"{filepath}/stat_weights_overall.csv")
 
-# # Reading the JSON file as a dictionary
-# with open(f"{filepath}/team_dict.json", 'r') as file:
-#     team_dict = json.load(file)
+# Reading the JSON file as a dictionary
+with open(f"{filepath}/team_dict.json", 'r') as file:
+    team_dict = json.load(file)
 
-# with open(f"{filepath}/team_dict_short.json", 'r') as file:
-#     team_dict_short = json.load(file)
+with open(f"{filepath}/team_dict_short.json", 'r') as file:
+    team_dict_short = json.load(file)
 
-# with open(f"{filepath}/position_alias.json", 'r') as file:
-#     pos_alias_dict = json.load(file)
+with open(f"{filepath}/position_alias.json", 'r') as file:
+    pos_alias_dict = json.load(file)
 
-# with open(f"{filepath}/custom_weights.json", 'r') as file:
-#     custom_weights_dict = json.load(file)
+with open(f"{filepath}/custom_weights.json", 'r') as file:
+    custom_weights_dict = json.load(file)
 
 
 
-# pr = players_rating(player_offense, player_defense, player_kicking, player_returns, snap_counts,rosters, injuries, starters_df,games_info,team_dict,team_dict_short,pos_alias_dict,stat_weights,stat_weights_overall,custom_weights_dict,pos_weight=False,overall=True)
+pr = players_rating(player_offense, player_defense, player_kicking, player_returns, snap_counts,rosters, injuries, starters_df,games_info,team_dict,team_dict_short,pos_alias_dict,stat_weights,stat_weights_overall,custom_weights_dict,pos_weight=True,overall=True)
+
+pr.to_csv(f"{filepath}/player_ratings.csv", index=False)
