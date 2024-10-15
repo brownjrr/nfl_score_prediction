@@ -56,15 +56,27 @@ def prep_games_df(file_loc: str) -> pd.DataFrame:
 
     df = pd.read_csv(file_loc)
 
-    # Create a team_name dict
-    team_dict = (df.groupby('team_name')
-                 .agg({'team_id': 'first'})['team_id']
-                 .to_dict()
-                )
+    # Drop records for duplicate games
+    df = df.drop_duplicates(['boxscore_stub'])
 
-    # Add in opposiing team name
-    df['opp_team_id'] = df['opp'].apply(lambda x: team_dict.get(x))
-    df.rename(columns={'team_abbr': 'home_team_id'}, inplace=True)
+    # calculate home_team_id and opp_team_id based on boxscore_stub
+    df['boxscore_team_abbr'] = df['boxscore_stub'].str.split("/", expand=False).str[-1].str.replace(".htm", "").str[-3:]
+    df['temp_results'] = df.apply(lambda row: ((row['team_id'], row['score_team']), (row['opp_team_id'], row['score_opp'])) if row['boxscore_team_abbr']==row['team_id'] else ((row['opp_team_id'], row['score_opp']), (row['team_id'], row['score_team'])), axis=1)
+    df[['home_team_id', 'opp_team_id']] = pd.DataFrame(df['temp_results'].tolist(), index=df.index)
+    df[['home_team_id', 'score_team']] = pd.DataFrame(df['home_team_id'].tolist(), index=df.index)
+    df[['opp_team_id', 'score_opp']] = pd.DataFrame(df['opp_team_id'].tolist(), index=df.index)
+
+    # Create a team_name dict
+    # team_dict = (df.groupby('team_name')
+    #              .agg({'team_id': 'first'})['team_id']
+    #              .to_dict()
+    #             )
+
+    # # Add in opposiing team name
+    # df['opp_team_id'] = df['opp'].apply(lambda x: team_dict.get(x))
+    # df.rename(columns={'team_abbr': 'home_team_id'}, inplace=True)
+
+    # print(df[['score_team', 'score_opp', 'boxscore_stub', 'home_team_id', 'opp_team_id']])
 
     # Split the record
     df[['wins', 'losses', 'ties']] = df['rec'].str.split('-', expand=True)
