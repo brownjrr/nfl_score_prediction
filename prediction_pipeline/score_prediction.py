@@ -137,7 +137,7 @@ def rfr_hyperparameter_tuning(x_train, y_train):
     
     param_grid = {
         'regressor__estimator__n_estimators': [10, 100, 1000],
-        'preprocessor__num__imputer__strategy': ['mean', 'median']
+        'preprocessor__num__imputer__strategy': ['mean', 'median'],
     }
 
     grid_search = GridSearchCV(
@@ -185,7 +185,11 @@ def gb_hyperparameter_tuning(x_train, y_train):
 def train_random_forest(model_df: pd.DataFrame):
     X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
     
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    X_train_keys = X_train[key_cols]
     X_features_train = X_train[FEATURE_SELECTION]
+    X_test_keys = X_test[key_cols]
     X_features_test = X_test[FEATURE_SELECTION]
 
     # Expose X_features_test for SHAP
@@ -206,6 +210,7 @@ def train_random_forest(model_df: pd.DataFrame):
     final_model = X_features_test.copy()
     final_model[['score_home_test', 'score_opp_test']] = y_test
     final_model[['score_home_pred', 'score_opp_pred']] = y_pred
+    final_model = pd.concat([X_test_keys, final_model], axis=1)
     final_model.to_csv('data/output/random_forest_model_output.csv')
     print(f"Random Forest's best MAE results: {best_model_mae}")
     print(f"Random Forest's best RMSE results: {best_model_rmse}")
@@ -215,7 +220,11 @@ def train_random_forest(model_df: pd.DataFrame):
 def train_gradient_boost(model_df: pd.DataFrame):
     X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
     
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    X_train_keys = X_train[key_cols]
     X_features_train = X_train[FEATURE_SELECTION]
+    X_test_keys = X_test[key_cols]
     X_features_test = X_test[FEATURE_SELECTION]
 
     # Expose X_features_test for SHAP
@@ -236,6 +245,7 @@ def train_gradient_boost(model_df: pd.DataFrame):
     final_model = X_features_test.copy()
     final_model[['score_home_test', 'score_opp_test']] = y_test
     final_model[['score_home_pred', 'score_opp_pred']] = y_pred
+    final_model = pd.concat([X_test_keys, final_model], axis=1)
     final_model.to_csv('data/output/gradient_boosted_model_output.csv')
     print(f"Gradient Boosted's best MAE results: {best_model_mae}")
     print(f"Gradient Boosted's best RMSE results: {best_model_rmse}")
