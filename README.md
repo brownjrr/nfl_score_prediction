@@ -13,6 +13,7 @@ Files Required To Run Makefile
 - /data/snap_counts_all.csv
 - /data/raw_game_level_coach_data.csv
 - /data/player_positions.csv
+- /data/positions.csv
 - /data/rosters.csv
 - /data/teams.csv
 - /data/coaches.csv

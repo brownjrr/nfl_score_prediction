@@ -1,3 +1,12 @@
+./data/intermediate/game_rank_matchup.csv: ./prediction_pipeline/player_ranking_features.py ./data/intermediate/games_df.csv ./data/intermediate/roster_df.csv
+	python ./prediction_pipeline/player_ranking_features.py
+
+./data/intermediate/games_df.csv: ./prediction_pipeline/team_features.py ./data/coach_ratings.csv
+	python ./prediction_pipeline/team_features.py
+
+./data/intermediate/roster_df.csv: ./prediction_pipeline/roster_features.py ./data/player_ratings.csv
+	python ./prediction_pipeline/roster_features.py
+
 ./data/player_ratings.csv: ./scripts/players_rating.py ./data/stat_weights_by_position.csv ./data/stat_weights_overall.csv
 	python ./scripts/players_rating.py
 	
