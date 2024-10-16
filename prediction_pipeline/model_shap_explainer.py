@@ -1,22 +1,42 @@
-import pickle
-import seaborn
-import pandas as pd
 import shap
+import numpy as np
+from sklearn.multioutput import MultiOutputRegressor
 
-def read_model(file_name: str):
-    if "/" in file_name:
-        print(f"Reverting to full path. Saving to {file_name}")
-        file_loc = file_name
+# Helper code for MultiOutputRegressor taken from
+# SHAP github --  https://github.com/shap/shap/issues/1104
+
+def build_explainer(model, *args, **kwargs):
+    """
+    If model is an instance of MultiOutputRegressor, use MultiOutputExplainer abstraction.
+    Note: Explainer is automatically converted to TreeExplainer when mode is tree based
+    """
+
+    if isinstance(model, MultiOutputRegressor):
+        explainer = MultiOutputExplainer(model, *args, **kwargs)
     else:
-        file_loc = 'data/model/' + file_name
+        explainer = shap.Explainer(model, *args, **kwargs)
+    return explainer
 
-    with open(file_loc, 'rb') as f:
-        reg = pickle.load(f)
+class MultiOutputExplainer(shap.Explainer):
+    """Abstraction of Explainer for MultiOutputRegressor model
+    """
+    def __init__(self, model, *args, **kwargs):
+        assert isinstance(model, MultiOutputRegressor)
+        self.explainers = []
+        self.expected_value = []
+        for estimator in model.estimators_:
+            explainer = shap.Explainer(estimator, *args, **kwargs)
+            self.explainers.append(explainer)
+            self.expected_value.append(explainer.expected_value)
 
-    return reg
-
-rfr = read_model('random_forest_model.pkl')
-x_test = pd.read_csv('data/intermediate/x_test.csv')
-explainer = shap.TreeExplainer()
-shap_values = explainer.shap_values(x_test)
-shap.summary_plot(shap_values)
+    def shap_values(self, *args, **kwargs):
+        shap_values = []
+        for explainer in self.explainers:
+            shap_values.append(explainer.shap_values(*args, **kwargs))
+        return np.array(shap_values)
+    
+    def shap_interaction_values(self, *args, **kwargs):
+        shap_interaction_values = []
+        for explainer in self.explainers:
+            shap_interaction_values.append(explainer.shap_interaction_values)
+        return np.array(shap_interaction_values)
