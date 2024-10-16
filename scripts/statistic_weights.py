@@ -524,6 +524,8 @@ def ridge_regression_v1(verbose=False):
             if verbose: print("=========================================")
         if verbose: print("________________________________________________________________")
 
+    X_train.to_csv('data/intermediate/model_ridge__position__x_train.csv')
+    X_test.to_csv('data/intermediate/model_ridge__position__x_test.csv')
     return results
 
 def ridge_regression_v2(verbose=False):
@@ -564,6 +566,9 @@ def ridge_regression_v2(verbose=False):
                 results = feature_importances
 
         if verbose: print("=========================================")
+
+    X_train.to_csv('data/intermediate/model_ridge__weights_overall__x_train.csv')
+    X_test.to_csv('data/intermediate/model_ridge__weights_overall__x_train.csv')
 
     return results
 
