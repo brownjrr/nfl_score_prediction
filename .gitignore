@@ -2,3 +2,5 @@
 scripts/__pycache__/
 .vscode/settings.json
 data/model/random_forest_model.pkl
+.venv/
+prediction_pipeline/__pycache__/
