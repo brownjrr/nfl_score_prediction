@@ -5,7 +5,7 @@ Created on Mon Sep 23 00:37:15 2024
 @author: masca
 """
 
-import nfl_scrape_teams
+import gather.nfl_scrape_teams as nfl_scrape
 import pandas as pd
 import time
 from pathlib import Path
@@ -15,7 +15,7 @@ years = range(2013, 2024)
 teams_df = []
 
 for year in years:
-    tdf = nfl_scrape_teams.scrape_team_years(year)
+    tdf = nfl_scrape.scrape_team_years(year)
     tdf.to_csv(f'tmp_{year}.csv')
     time.sleep(30)
     teams_df.append(tdf)

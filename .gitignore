@@ -4,3 +4,5 @@ scripts/__pycache__/
 data/model/random_forest_model.pkl
 .venv/
 prediction_pipeline/__pycache__/
+prediction_pipeline/__pycache__/model_shap_explainer.cpython-311.pyc
+prediction_pipeline/__pycache__/__init__.cpython-311.pyc
