@@ -18,7 +18,8 @@ FEATURE_SELECTION = [
     'week_ind', 'day_int',
     'attendance', 'roof_type',
     'humidity_pct', 'wind_speed',
-    'temperature', 'over_under_value', 'team_spread'
+    'temperature', 'over_under_value',
+    'spread_value', 'spread_home_away',
     'coach_rating', 'coach_rating_opp',
     'home_strength', 'opp_strength'
     ]
