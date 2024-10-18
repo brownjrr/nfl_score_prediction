@@ -13,6 +13,7 @@ from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 import os
+import pickle
 
 
 # Get the directory of the current script
@@ -521,9 +522,17 @@ def ridge_regression_v1(verbose=False):
 
                     results[i] = feature_importances
 
+                X_train.to_csv(f'data/intermediate/model_ridge__position_{i}__x_train.csv', index=False)
+                X_test.to_csv(f'data/intermediate/model_ridge__position_{i}__x_test.csv', index=False)
+                with open(f'data/intermediate/model_ridge__position_{i}__model.pkl', 'wb') as f:
+                    pickle.dump(reg, f)
+
+
             if verbose: print("=========================================")
         if verbose: print("________________________________________________________________")
 
+    #X_train.to_csv('data/intermediate/model_ridge__position__x_train.csv')
+    #X_test.to_csv('data/intermediate/model_ridge__position__x_test.csv')
     return results
 
 def ridge_regression_v2(verbose=False):
@@ -564,6 +573,9 @@ def ridge_regression_v2(verbose=False):
                 results = feature_importances
 
         if verbose: print("=========================================")
+
+    X_train.to_csv('data/intermediate/model_ridge__weights_overall__x_train.csv')
+    X_test.to_csv('data/intermediate/model_ridge__weights_overall__x_train.csv')
 
     return results
 

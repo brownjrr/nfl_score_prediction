@@ -193,7 +193,8 @@ def train_random_forest(model_df: pd.DataFrame):
     X_features_test = X_test[FEATURE_SELECTION]
 
     # Expose X_features_test for SHAP
-    X_features_test.to_csv('data/intermediate/x_test.csv', index=False)
+    X_features_train.to_csv('data/intermediate/model_rfr__x_train.csv', index=False)
+    X_features_test.to_csv('data/intermediate/model_rfr__x_test.csv', index=False)
 
     #pipe = random_forest_pipeline_prediction(model_type)
 
