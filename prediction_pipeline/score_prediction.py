@@ -82,7 +82,7 @@ def baseline_rfr(model_df, random_state=42):
     return (score)
 
 
-def model_pipeline_prediction(model_regressor):
+def model_pipeline_prediction(model_regressor, single_target: bool=False):
     """
     Feeds in our  main model data into a pipeline for training
     and hyperparameter tuning, and the final output
@@ -117,15 +117,20 @@ def model_pipeline_prediction(model_regressor):
     # Define our regressor
     base_regressor = model_regressor
     multi_target_regressor = MultiOutputRegressor(base_regressor)
+
+    if single_target:
+        estimator = base_regressor
+    else:
+        estimator = multi_target_regressor
     pipe = Pipeline(steps=[
         ("preprocessor", preprocess),
-        ("regressor", multi_target_regressor)
+        ("regressor", estimator)
     ])
 
     return pipe
 
 
-def rfr_hyperparameter_tuning(x_train, y_train):
+def rfr_hyperparameter_tuning(x_train, y_train, single_output_model: bool=False):
     """
     Takes in part of the pipe process and returns the best fit hyperparameters
     
@@ -133,21 +138,33 @@ def rfr_hyperparameter_tuning(x_train, y_train):
     ----
         - x_train: the training data
         - y_train: the training target
+        - single_output_model: Determines whether or not to run a single model output
         - returns: GridSearchCV object that is best fit to the data
     """
 
-    pipe = model_pipeline_prediction(RandomForestRegressor(random_state=42))
+    pipe = model_pipeline_prediction(RandomForestRegressor(random_state=42),
+                                     single_target=single_output_model)
     
-    param_grid = {
-        'regressor__estimator__n_estimators': [10, 100, 1000],
-        'preprocessor__num__imputer__strategy': ['mean', 'median'],
-    }
+    if single_output_model:
+        param_grid = {
+            'regressor__n_estimators': [10, 100, 1000],
+            'regressor__max_depth': [10, 25, 50, None],
+            'regressor__min_samples_split': [2, 5, 10],
+            'preprocessor__num__imputer__strategy': ['mean', 'median'],
+        }
+    else:
+        param_grid = {
+            'regressor__estimator__n_estimators': [10, 100, 1000],
+            'regressor__estimator__max_depth': [10, 25, 50, None],
+            'regressor__estimator__min_samples_split': [2, 5, 10],
+            'preprocessor__num__imputer__strategy': ['mean', 'median'],
+        }
 
     grid_search = GridSearchCV(
         estimator=pipe,
         param_grid = param_grid,
         cv = 5,
-        verbose = 2
+        verbose = 0
     )
 
     return grid_search.fit(x_train, y_train)
@@ -179,13 +196,13 @@ def gb_hyperparameter_tuning(x_train, y_train):
         estimator=pipe,
         param_grid = param_grid,
         cv = 5,
-        verbose = 2
+        verbose = 0
     )
 
     return grid_search.fit(x_train, y_train)
 
 
-def train_random_forest(model_df: pd.DataFrame):
+def train_random_forest(model_df: pd.DataFrame, output_data: bool=True):
     X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
     
     key_cols = ['game_id', 'boxscore_stub',]
@@ -196,8 +213,9 @@ def train_random_forest(model_df: pd.DataFrame):
     X_features_test = X_test[FEATURE_SELECTION]
 
     # Expose X_features_test for SHAP
-    X_features_train.to_csv('data/intermediate/model_rfr__x_train.csv', index=False)
-    X_features_test.to_csv('data/intermediate/model_rfr__x_test.csv', index=False)
+    if output_data:
+        X_features_train.to_csv('data/intermediate/model_rfr__x_train.csv', index=False)
+        X_features_test.to_csv('data/intermediate/model_rfr__x_test.csv', index=False)
 
     #pipe = random_forest_pipeline_prediction(model_type)
 
@@ -255,6 +273,65 @@ def train_gradient_boost(model_df: pd.DataFrame):
     print(f"Gradient Boosted's best RMSE results: {best_model_rmse}")
     return best_model
 
+
+def single_output_random_forest(
+        model_df: pd.DataFrame,
+        output_data: bool=False
+        ) -> None:
+    
+    X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
+    y_train_home = y_train.iloc[:, 0]
+    y_train_opp = y_train.iloc[:, 1]
+    y_test_home = y_test.iloc[:, 0]
+    y_test_opp = y_test.iloc[:, 1]
+
+    
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    X_train_keys = X_train[key_cols]
+    X_features_train = X_train[FEATURE_SELECTION]
+    X_test_keys = X_test[key_cols]
+    X_features_test = X_test[FEATURE_SELECTION]
+
+    #pipe = random_forest_pipeline_prediction(model_type)
+
+    # Train our random forest
+    print("Tuning Single Output Random Forest model...")
+    home_team_model = rfr_hyperparameter_tuning(
+        X_features_train,
+        y_train_home,
+        single_output_model=True
+    )
+    print("... now training the opp_team model ...")
+    opp_team_model = rfr_hyperparameter_tuning(
+        X_features_train,
+        y_train_opp,
+        single_output_model=True
+    )
+    print("Tuning complete")
+    print("-------------------\n")
+
+    # Get the score on the test set
+    y_pred_home = home_team_model.predict(X_features_test)
+    y_pred_opp = opp_team_model.predict(X_features_test)
+    best_home_model_mae = mean_absolute_error(y_test_home, y_pred_home)
+    best_opp_model_mae = mean_absolute_error(y_test_opp, y_pred_opp)
+    best_home_model_rmse = root_mean_squared_error(y_test_home, y_pred_home)
+    best_opp_model_rmse = root_mean_squared_error(y_test_opp, y_pred_opp)
+
+    final_model = X_features_test.copy() 
+    final_model['score_home_test'] = y_test_home
+    final_model['score_opp_test'] = y_test_opp
+    final_model['score_home_pred'] = y_pred_home
+    final_model['score_opp_pred'] = y_pred_opp
+    final_model = pd.concat([X_test_keys, final_model], axis=1)
+    final_model.to_csv('data/output/single_random_forest_model_output.csv')
+    print(f"Random Forest's best MAE results: {best_home_model_mae}")
+    print(f"Random Forest's best RMSE results: {best_home_model_rmse}")
+    print(f"Random Forest's best MAE results: {best_opp_model_mae}")
+    print(f"Random Forest's best RMSE results: {best_opp_model_rmse}")
+    return home_team_model
+
 def save_pickle_model(file_name: str, model) -> None:
     """
     Saves our model to the '/data/model/' location
@@ -295,6 +372,7 @@ if __name__ == '__main__':
     
     best_tuned_random_forest = train_random_forest(model_df=game_match_df)
     best_tuned_gradient_boost = train_gradient_boost(model_df=game_match_df)
+    best_home_model = single_output_random_forest(model_df=game_match_df, output_data=True)
     
 
     # Save our models
@@ -303,4 +381,7 @@ if __name__ == '__main__':
 
     save_pickle_model(file_name="gradient_boosted_model.pkl",
                       model=best_tuned_gradient_boost)
+    
+    save_pickle_model(file_name="single_target_random_forest_model.pkl",
+                      model=best_home_model)
 # %%
