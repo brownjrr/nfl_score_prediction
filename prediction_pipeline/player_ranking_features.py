@@ -67,6 +67,7 @@ def player_position_group(df: pd.DataFrame,
     - player_id is a list of all players ['TaylTr0', 'BrayQu00', 'WattJ.00']
     - position is the position they are in (aliased): ['QB', 'WR', 'TE']
     - approx_value/rank is a list of the players rank: [14.5, 1.5, 20.1]
+        We are using the player's rating from the previous game `prior_rating`
     """
 
     team_id_col = 'home_team_id' if home_away_switch == 0 else 'opp_team_id'
@@ -94,13 +95,13 @@ def player_position_group(df: pd.DataFrame,
                   .agg({
                       'player_id': list,
                       'position': list,
-                      'player_rating': list
+                      'prior_rating': list
                   })
                 )
     grouped_ranking = (grouped_df
                        .rename(columns={
                            'player_id': player_col,
-                           'player_rating': rank_col
+                           'prior_rating': rank_col
                        })
                     )
     

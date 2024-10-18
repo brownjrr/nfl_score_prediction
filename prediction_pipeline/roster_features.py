@@ -138,7 +138,21 @@ def player_ratings_addition(file_loc: str) -> pd.DataFrame:
     df['position_cat'] = df['position'].map(position_category.get)
     df = df.rename(columns={'date': 'event_date', 'team_abb': 'team_id', 'rating': 'player_rating'})
 
-    return df
+    # Player rating data comes in based on the current game
+    # This is a source of data leakage
+    # To remove from our model, we will pass in to the model the previous ranking of the player
+
+    # First sort and add a counter column per season per player
+    df = df.sort_values(
+        ['player_id', 'season', 'event_date'],
+        ascending=True
+        )
+    
+    df['games_played_counter'] = df.groupby(['season', 'player_id']).cumcount() + 1
+    df['prior_rating'] = df.groupby(['season', 'player_id'])['player_rating'].shift(1)
+    
+    # Return our dataframe with values from 
+    return df.dropna(subset=['prior_rating'])
     
 # %%
 if __name__ == '__main__':

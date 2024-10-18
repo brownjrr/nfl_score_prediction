@@ -1,4 +1,4 @@
-run_model: prediction_pipeline/score_prediction.py game_rank_matchup roster_dataframe
+run_model: roster_dataframe games_dataframe game_rank_matchup prediction_pipeline/score_prediction.py
 	@echo "Generating model"
 	@python prediction_pipeline/score_prediction.py \
 	@echo "...model trained"
