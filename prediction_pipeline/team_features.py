@@ -83,6 +83,14 @@ def prep_games_df(file_loc: str) -> pd.DataFrame:
     df[['over_under_value', 'over_under_cat']] = (df['over_under']
                                                   .str
                                                   .extract(r'(\d+\.?\d*) \((\w+)\)'))
+    df[['team_spread_adv', 'spread_value']] =(df['team_spread']
+                                                .str
+                                                .extract(
+                                                    r'([\w\s]+) ([+-]?\d+)'
+                                                    )
+                                            )
+    
+    df['spread_home_away'] = (df['team_name'] == df['team_spread_adv']).astype(int)
 
     # Convert number columns to numbers
     # There were 2 games in 2022 that were cancelled

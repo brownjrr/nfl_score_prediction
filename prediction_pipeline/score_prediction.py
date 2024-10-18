@@ -15,10 +15,11 @@ from sklearn.compose import ColumnTransformer
 #import constants
 
 FEATURE_SELECTION = [
-    'week_ind', 'day_int', 'OT',
-    'away', 'attendance', 'roof_type',
+    'week_ind', 'day_int',
+    'attendance', 'roof_type',
     'humidity_pct', 'wind_speed',
-    'temperature', 'duration',
+    'temperature', 'over_under_value',
+    'spread_value', 'spread_home_away',
     'coach_rating', 'coach_rating_opp',
     'home_strength', 'opp_strength'
     ]
@@ -46,11 +47,13 @@ def model_data_read(file_loc: str) -> pd.DataFrame:
 def add_matchup_rank(df: pd.DataFrame, file_loc: str) -> pd.DataFrame:
     """
     Add the columns for the matchup score to our main dataframe
+    Merging using 'inner' to ensure no NAs
     """
     matchup_rank = pd.read_csv(file_loc)
     return df.merge(
         matchup_rank,
-        on='game_id'
+        on='game_id',
+        how='inner'
     )
 
 
