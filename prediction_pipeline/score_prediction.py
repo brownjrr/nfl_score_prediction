@@ -21,7 +21,8 @@ FEATURE_SELECTION = [
     'temperature', 'over_under_value',
     'spread_value', 'spread_home_away',
     'coach_rating', 'coach_rating_opp',
-    'home_strength', 'opp_strength'
+    'home_strength', 'opp_strength',
+    'team_rating', 'team_rating_opp'
     ]
 
 #%%
