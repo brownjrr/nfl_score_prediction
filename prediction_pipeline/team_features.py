@@ -39,6 +39,15 @@ def read_in_coach_ratings(file_loc:str) -> pd.DataFrame:
         ]
     return df[COACH_COLUMNS]
 
+def read_in_team_ratings(file_loc:str) -> pd.DataFrame:
+    df = pd.read_csv(file_loc)
+    TEAM_RATING_COLUMNS = [
+        'team_id',
+        'event_date',
+        'rating'
+    ]
+
+    return df[TEAM_RATING_COLUMNS]
 
 #%%
 def replace_na_mean(df_col: pd.Series):
@@ -156,8 +165,7 @@ def prep_games_df(file_loc: str) -> pd.DataFrame:
                       'Division': 21, 'Conf. Champ': 22,
                       'SuperBowl': 23}
     
-    df['week_ind'] = df['week'].map(week_ind_map.get)
-    
+    df['week_ind'] = df['week'].map(week_ind_map.get)    
 
     
     return df
@@ -200,12 +208,32 @@ def team_coach_merge(game_df: pd.DataFrame,
     )
 
     return df
+
+def merge_team_rating(df: pd.DataFrame) -> pd.DataFrame:
+    rating_df = read_in_team_ratings('data/team_rating.csv')
+    rating_df = rating_df.rename(columns={'rating': 'team_rating'})
+    tdf = pd.merge(df, rating_df,
+                   how='left',
+                   left_on=['event_date', 'home_team_id'],
+                   right_on=['event_date', 'team_id'],
+                   suffixes=["", "_home"])
+    
+    tdf = tdf.merge(rating_df,
+                    how='left',
+                    left_on=['event_date', 'opp_team_id'],
+                    right_on=['event_date', 'team_id'],
+                    suffixes=["", "_opp"]
+    )
+
+    return tdf
+
 # %%
 if __name__ == '__main__':
     #coach_df = prep_coaches_df('data/coaches.csv')
     coach_df = read_in_coach_ratings('data/coach_ratings.csv')
     game_df = prep_games_df('data/teams.csv')
     game_df = team_coach_merge(game_df=game_df, coach_df=coach_df)
+    game_df = merge_team_rating(df=game_df)
     try:
         game_df.drop(columns=['Unnamed: 0'])
     except KeyError as e:
