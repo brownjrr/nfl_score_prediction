@@ -11,6 +11,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.model_selection import GridSearchCV
 from sklearn.compose import ColumnTransformer
 
+import numpy as np
+
 # Bring in our constants
 #import constants
 
@@ -69,6 +71,24 @@ def tts_prep(df: pd.DataFrame, test_year: int=2023):
 
     return X_train, X_test, y_train, y_test
 
+def tts_split_data(df: pd.DataFrame, test_year: int=2023):
+    X_train, X_test, y_train, y_test = tts_prep(df, test_year=test_year)
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    X_train_keys = X_train[key_cols]
+    X_features_train = X_train[FEATURE_SELECTION]
+    X_test_keys = X_test[key_cols]
+    X_features_test = X_test[FEATURE_SELECTION]
+
+    return (
+        X_features_train,
+        X_features_test,
+        y_train,
+        y_test,
+        X_train_keys,
+        X_test_keys
+    )
+    
 
 def baseline_rfr(model_df, random_state=42):
     X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
@@ -250,9 +270,6 @@ def train_gradient_boost(model_df: pd.DataFrame):
     X_test_keys = X_test[key_cols]
     X_features_test = X_test[FEATURE_SELECTION]
 
-    # Expose X_features_test for SHAP
-    X_features_test.to_csv('data/intermediate/x_test.csv', index=False)
-
     #pipe = random_forest_pipeline_prediction(model_type)
 
     # Train our random forest
@@ -332,6 +349,50 @@ def single_output_random_forest(
     print(f"Random Forest's best MAE results: {best_opp_model_mae}")
     print(f"Random Forest's best RMSE results: {best_opp_model_rmse}")
     return home_team_model
+
+
+def single_model_for_shap(model_df: pd.DataFrame,
+                          n_estimators: int,
+                          max_depth: int,
+                          min_samples_split: int,
+                          input_strategy: str
+                          ) -> None:
+    
+    X_train, X_test, y_train, y_test, _, _= tts_split_data(model_df, test_year=2023)
+    
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    # Apply preprocess steps manually
+    numeric_features=[item for item in 
+                      FEATURE_SELECTION if item != 'roof_type']
+    categoric_features = ['roof_type']
+
+    numeric_transformer = Pipeline(
+        steps=[("imputer", SimpleImputer()),
+               ("scaler", StandardScaler())]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[("imputer", SimpleImputer(
+            strategy="constant",
+            fill_value="missing")),
+            ("onehot",
+             OneHotEncoder(handle_unknown="ignore")
+             )
+        ]
+    )
+
+    preprocess = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categoric_features)
+        ]
+    )
+
+    X_transformed = preprocess.fit_transform(X_train)
+    return X_transformed
+
+    
 
 def save_pickle_model(file_name: str, model) -> None:
     """
