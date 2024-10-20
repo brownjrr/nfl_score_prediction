@@ -11,6 +11,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.model_selection import GridSearchCV
 from sklearn.compose import ColumnTransformer
 
+import numpy as np
+
 # Bring in our constants
 #import constants
 
@@ -69,18 +71,53 @@ def tts_prep(df: pd.DataFrame, test_year: int=2023):
 
     return X_train, X_test, y_train, y_test
 
+def tts_split_data(df: pd.DataFrame,
+                   test_year: int=2023,
+                   features: list=FEATURE_SELECTION):
+    X_train, X_test, y_train, y_test = tts_prep(df, test_year=test_year)
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    X_train_keys = X_train[key_cols]
+    X_features_train = X_train[features]
+    X_test_keys = X_test[key_cols]
+    X_features_test = X_test[features]
+
+    return (
+        X_features_train,
+        X_features_test,
+        y_train,
+        y_test,
+        X_train_keys,
+        X_test_keys
+    )
+    
 
 def baseline_rfr(model_df, random_state=42):
-    X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
+    feature_list = [
+    'week_ind', 'day_int',
+    'attendance', 'roof_type_int',
+    'humidity_pct', 'wind_speed',
+    'temperature', 'over_under_value',
+    'spread_value', 'spread_home_away',
+    'coach_rating', 'coach_rating_opp',
+    'home_strength', 'opp_strength',
+    'team_rating', 'team_rating_opp'
+    ]
     
-    X_features_train = X_train[FEATURE_SELECTION]
-    X_features_test = X_test[FEATURE_SELECTION]
+    X_train,X_test, y_train, y_test, x_train_keys, x_test_keys = tts_split_data(
+        model_df,
+        test_year=2023,
+        features=feature_list)
 
-    clf = RandomForestRegressor(random_state=random_state).fit(X_features_train, y_train)
-    print(f'Training results: {clf.score(X_features_train, y_train):.3f}')
-    score = clf.score(X_features_test, y_test)
+    rfr = RandomForestRegressor(random_state=random_state).fit(X_train, y_train)
+    print(f'Training results: {rfr.score(X_train, y_train):.3f}')
     
-    return (score)
+    y_pred = rfr.predict(X_test)
+    rfr_mae = mean_absolute_error(y_test, y_pred)
+    rfr_rmse = root_mean_squared_error(y_test, y_pred)
+    print(f"Base random forest model MAE {rfr_mae:.3f}")
+    print(f"Base random forest model RMSE {rfr_rmse:.3f}")
+    return None
 
 
 def model_pipeline_prediction(model_regressor, single_target: bool=False):
@@ -250,9 +287,6 @@ def train_gradient_boost(model_df: pd.DataFrame):
     X_test_keys = X_test[key_cols]
     X_features_test = X_test[FEATURE_SELECTION]
 
-    # Expose X_features_test for SHAP
-    X_features_test.to_csv('data/intermediate/x_test.csv', index=False)
-
     #pipe = random_forest_pipeline_prediction(model_type)
 
     # Train our random forest
@@ -333,6 +367,60 @@ def single_output_random_forest(
     print(f"Random Forest's best RMSE results: {best_opp_model_rmse}")
     return home_team_model
 
+
+def single_model_for_shap(model_df: pd.DataFrame,
+                          n_estimators: int,
+                          max_depth: int,
+                          min_samples_split: int,
+                          input_strategy: str
+                          ) -> None:
+    
+    X_train, X_test, y_train, y_test, _, _= tts_split_data(model_df, test_year=2023)
+    
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    # Apply preprocess steps manually
+    # Change root_type to be the int version
+    NEW_FEATURES = [f for f in FEATURE_SELECTION if f != "roof_type"]
+    NEW_FEATURES.append("roof_type_int")
+    numeric_features=NEW_FEATURES
+
+    numeric_transformer = Pipeline(
+        steps=[("imputer", SimpleImputer()),
+               ("scaler", StandardScaler())]
+    )
+
+    # Excluding the categorical transform
+    categorical_transformer = Pipeline(
+        steps=[("imputer", SimpleImputer(
+            strategy="constant",
+            fill_value="missing")),
+            ("onehot",
+             OneHotEncoder(handle_unknown="ignore")
+             )
+        ]
+    )
+
+    preprocess = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features)
+        ]
+    )
+
+    X_transformed = preprocess.fit_transform(X_train)
+    rfr = RandomForestRegressor(random_state=42,
+                                n_estimators=n_estimators,
+                                max_depth=max_depth,
+                                min_samples_split=min_samples_split,
+                                criterion="squared_error")
+    rfr.fit(X_transformed, y_train)
+    
+    save_train = pd.DataFrame(X_transformed)
+    save_train.to_csv("data/output/model_rfr__x_train_transformed.csv")
+    return rfr
+
+    
+
 def save_pickle_model(file_name: str, model) -> None:
     """
     Saves our model to the '/data/model/' location
@@ -371,18 +459,19 @@ if __name__ == '__main__':
     #print(f'Without any team player indicators, \
     #      the model gives us a training score of {base_score}')
     
-    best_tuned_random_forest = train_random_forest(model_df=game_match_df)
-    best_tuned_gradient_boost = train_gradient_boost(model_df=game_match_df)
-    best_home_model = single_output_random_forest(model_df=game_match_df, output_data=True)
+    original_model = baseline_rfr(game_match_df)
+    #best_tuned_random_forest = train_random_forest(model_df=game_match_df)
+    #best_tuned_gradient_boost = train_gradient_boost(model_df=game_match_df)
+    #best_home_model = single_output_random_forest(model_df=game_match_df, output_data=True)
     
 
     # Save our models
-    save_pickle_model(file_name="random_forest_model.pkl",
-                      model=best_tuned_random_forest)
+    #save_pickle_model(file_name="random_forest_model.pkl",
+    #                  model=best_tuned_random_forest)
 
-    save_pickle_model(file_name="gradient_boosted_model.pkl",
-                      model=best_tuned_gradient_boost)
+    #save_pickle_model(file_name="gradient_boosted_model.pkl",
+    #                  model=best_tuned_gradient_boost)
     
-    save_pickle_model(file_name="single_target_random_forest_model.pkl",
-                      model=best_home_model)
+    #save_pickle_model(file_name="single_target_random_forest_model.pkl",
+    #                  model=best_home_model)    
 # %%
