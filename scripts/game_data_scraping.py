@@ -16,7 +16,13 @@ from pytz import timezone
 import re
 import glob
 import warnings
+import os
 
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
+
+print(f"script_dir: {script_dir}")
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -384,11 +390,6 @@ def get_pbp_tables_with_links(driver, site, html_save_file, data_save_file):
     print(f"[{get_current_time()}] Finishing Up {i}")
 
 def get_seen_html_pages_pbp(base_save_loc):
-    # seen_pages = [
-    #     f'https://www.pro-football-reference.com/boxscores/{}.htm'
-    #     for i in glob.glob(base_save_loc+"*.txt")
-    # ]
-
     seen_pages = []
 
     for i in glob.glob(base_save_loc+"*.txt"):
@@ -398,10 +399,79 @@ def get_seen_html_pages_pbp(base_save_loc):
 
     return seen_pages
 
-if __name__ == '__main__':
-    # base_save_loc = "C:/Users/brown/OneDrive/pbp_data_files/"
-    base_save_loc = "C:/Users/Robert Brown/OneDrive/pbp_data_files/"
+def combine_jsons():
+    """
+    combining all play by play data (json to pandas df)
+    """
+    with open(script_dir+"../data/abbrev_map.json", "r") as f:
+        abbrev_map = json.load(f)
 
+    print(abbrev_map)
+
+    column_len_set = set()
+    column_set = set()
+    dfs = []
+    for df_json_file in [i.replace("\\", "/") for i in glob.glob("C:/Users/Robert Brown/OneDrive/pbp_data_files/dataframes/*.txt")]:
+        with open(df_json_file, "r") as f:
+            lines = f.readlines()
+
+            for line in lines:
+                json_obj = json.loads(line)
+
+                link = json_obj['index']
+                data = json_obj['data']
+
+                df = pd.read_json(data)
+
+                for j, col in enumerate(df.columns):
+                    if col in abbrev_map:
+                        team1_idx = j
+                        team1_name = df.columns[j]
+
+                        team2_idx = j+1
+                        team2_name = df.columns[j+1]
+                        break
+                    
+                df = df.rename(columns={team1_name: "team_1", team2_name: "team_2"})
+                df['team_1_name'] = abbrev_map[team1_name]
+                df['team_2_name'] = abbrev_map[team2_name]
+                df['link'] = link
+                df['boxscore_id'] = df['link'].str.split("/").str[-1].str.replace(".htm", "")
+                
+                column_len_set.add(len(df.columns))
+                column_set |= set(df.columns)
+
+                dfs.append(df)
+
+    df = pd.concat(dfs).drop_duplicates()
+
+    print(df)
+    print(f"Num Unique Links: {len(df['link'].unique())}")
+
+    pattern = r'<a href.*?/a>'
+    df['players'] = df['Detail'].apply(lambda x: [i for i in re.findall(pattern, x) if "/players/" in i])
+
+    # discard plays where no players were found AND
+    # discard plays where only 1 player is part of the interaction
+    # (these are often kicking/punting plays)
+    # df = df[df['player'].str.len() > 1]
+    df['players'] = df['players'].apply(lambda x: [re.findall(r"\".*?\"", i)[0].replace('"', '') for i in x])
+    # df = df.explode('player')
+    df['players'] = df['players'].apply(lambda x: [i.split("/")[-1].replace(".htm", "") for i in x])
+
+    # creating event_date columns
+    df['event_date'] = pd.to_datetime(df['boxscore_id'].str[:-4])
+
+    print(f"Min Date: {df['event_date'].min()} - Max Date: {df['event_date'].max()}")
+    print(df)
+
+    df.to_csv(script_dir+"../data/play_by_play.csv", index=False)
+
+
+if __name__ == '__main__':
+    # specify where you want to save these files to
+    base_save_loc = "C:/Users/Robert Brown/OneDrive/pbp_data_files/"
+    
     all_box_score_links = get_seen_pbp_links()
 
     seen_pages = get_seen_html_pages_pbp(base_save_loc)
@@ -410,12 +480,8 @@ if __name__ == '__main__':
 
     driver = get_webdriver()
 
-    while len(seen_pages) < 2992:
+    while len(seen_pages) < len(all_box_score_links):
         seen_pages = get_seen_html_pages_pbp(base_save_loc)
-
-        # print(seen_pages)
-        # print(f"seen_pages:\n{seen_pages}")
-        # print(f"all_box_score_links:\n{all_box_score_links}")
 
         print(f"Num Seen Pages: {len(seen_pages)}")
         
@@ -434,5 +500,7 @@ if __name__ == '__main__':
                 driver, 
                 site=i, 
                 html_save_file=html_save_file,
-                data_save_file=f"{base_save_loc}dataframes/play_by_play_dfs_pt_2.txt"
+                data_save_file=f"{base_save_loc}dataframes/play_by_play_dfs.txt"
             )
+    
+    combine_jsons()  

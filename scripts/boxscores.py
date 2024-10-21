@@ -14,8 +14,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")+"/"
 
 print(f"script_dir: {script_dir}")
 
-def get_boxscores_html():
-    base_dir = "C:/Users/Robert Brown/OneDrive/"
+def get_boxscores_html(base_dir = "C:/Users/Robert Brown/OneDrive/"):
     save_folder = f"{base_dir}boxscore_data_files/"
     files = [i.replace("\\", "/") for i in glob.glob(f"{base_dir}pbp_data_files/*.txt")]
     boxscores = [i.split("/")[-1].replace(".txt", "") for i in files]
@@ -144,6 +143,11 @@ def process_game_level_coach_data():
     df.to_csv(script_dir+"../data/game_level_coach_data.csv", index=False)
 
 if __name__ == '__main__':
-    # get_boxscores_html()
-    # create_coaches_dataframe(boxscore_folder="C:/Users/Robert Brown/OneDrive/boxscore_data_files")
+    # scrape boxscore data from pro-football-reference.com
+    get_boxscores_html()
+
+    # create raw_game_level_coach_data 
+    create_coaches_dataframe(boxscore_folder="C:/Users/Robert Brown/OneDrive/boxscore_data_files")
+
+    # use raw_game_level_coach_data.csv to create game_level_coach_data.csv
     process_game_level_coach_data()

@@ -26,10 +26,10 @@ Files Required To Run Makefile
 
 ___
 ## How to create play_by_play.csv
-[Enter Info Here]
+In order to create the `play_by_play.csv` table, you must run `game_data_scraping.py`. This script visits the website for each NFL game in our study, extracts the HTML and creates `play_by_play.csv`. This is a long running script!
 
 ## How to create players.csv
-[Enter Info Here]
+In order to create the `players.csv` table, you must run the `PlayerDataCollection.ipynb` notebook. This is a long running script!
 
 ## How to create game_starters_all.csv
 [Enter Info Here]
@@ -53,13 +53,13 @@ ___
 [Enter Info Here]
 
 ## How to create raw_game_level_coach_data.csv
-[Enter Info Here]
+In order to create `raw_game_level_coach_data.csv`, you must run `game_data_scraping.py`. This is a long running script!
 
 ## How to create player_positions.csv
-[Enter Info Here]
+In order to create `player_positions.csv`, you must run `create_player_position.py`.
 
 ## How to create rosters.csv
-[Enter Info Here]
+In order to create `rosters.csv`, you must run `RosterDataCollection.ipynb`.
 
 ## How to create teams.csv
 [Enter Info Here]
@@ -80,7 +80,7 @@ ___
 [Enter Info Here]
 
 ## How to create position_alias.csv
-[Enter Info Here]
+Hand crafted
 
 ## How to create custom_weights.csv
 [Enter Info Here]
