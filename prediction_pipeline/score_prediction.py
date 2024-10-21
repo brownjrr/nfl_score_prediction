@@ -3,6 +3,7 @@ import pandas as pd
 
 # Model libraries
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import PoissonRegressor
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
@@ -240,6 +241,38 @@ def gb_hyperparameter_tuning(x_train, y_train):
     return grid_search.fit(x_train, y_train)
 
 
+def poisson_hyperparameter_tuning(x_train, y_train):
+    """
+    Takes in part of the pipe process and returns the best fit hyperparameters
+    for a poisson regression model
+    
+    Args:
+    ----
+        - pipe: part of the sklearn pipeline
+        - x_train: the training data
+        - y_train: the training target
+        - returns: GridSearchCV object that is best fit to the data
+    """
+
+    pipe = model_pipeline_prediction(PoissonRegressor())
+
+    param_grid = {
+        'regressor__estimator__alpha': [0.0, 0.2, 1.0, 10.0],
+        'regressor__estimator__solver': ['lbfgs', 'newton-cholesky'],
+        'regressor__estimator__max_iter': [100, 200, 300],
+        'preprocessor__num__imputer__strategy': ['mean', 'median']
+    }
+
+    grid_search = GridSearchCV(
+        estimator=pipe,
+        param_grid = param_grid,
+        cv = 5,
+        verbose = 0
+    )
+
+    return grid_search.fit(x_train, y_train)
+
+
 def train_random_forest(model_df: pd.DataFrame, output_data: bool=True):
     X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
     
@@ -420,6 +453,41 @@ def single_model_for_shap(model_df: pd.DataFrame,
     return rfr
 
     
+def train_poisson_model(model_df: pd.DataFrame, output_data: bool=True):
+    X_train, X_test, y_train, y_test = tts_prep(model_df, test_year=2023)
+    
+    key_cols = ['game_id', 'boxscore_stub',]
+
+    X_train_keys = X_train[key_cols]
+    X_features_train = X_train[FEATURE_SELECTION]
+    X_test_keys = X_test[key_cols]
+    X_features_test = X_test[FEATURE_SELECTION]
+
+    # Expose X_features_test for SHAP
+    if output_data:
+        X_features_train.to_csv('data/intermediate/model_poisson__x_train.csv', index=False)
+        X_features_test.to_csv('data/intermediate/model_poisson__x_test.csv', index=False)
+
+    #pipe = random_forest_pipeline_prediction(model_type)
+
+    # Train our random forest
+    print("Tuning Random Forest model...")
+    best_model = poisson_hyperparameter_tuning(X_features_train, y_train)
+    print("Tuning complete")
+    print("-------------------\n")
+
+    # Get the score on the test set
+    y_pred = best_model.predict(X_features_test)
+    best_model_mae = mean_absolute_error(y_test, y_pred)
+    best_model_rmse = root_mean_squared_error(y_test, y_pred)
+    final_model = X_features_test.copy()
+    final_model[['score_home_test', 'score_opp_test']] = y_test
+    final_model[['score_home_pred', 'score_opp_pred']] = y_pred
+    final_model = pd.concat([X_test_keys, final_model], axis=1)
+    final_model.to_csv('data/output/poisson_model_output.csv')
+    print(f"Poisson Regression's best MAE results: {best_model_mae}")
+    print(f"Poisson Regression's best RMSE results: {best_model_rmse}")
+    return best_model
 
 def save_pickle_model(file_name: str, model) -> None:
     """
@@ -455,14 +523,12 @@ if __name__ == '__main__':
     # Filter to match our player rating model
     game_df = game_df.loc[game_df['season'] >= 2015]
     game_match_df = add_matchup_rank(game_df, 'data/intermediate/game_rank_matchup.csv')
-    #base_score = baseline_rfr(game_match_df)
-    #print(f'Without any team player indicators, \
-    #      the model gives us a training score of {base_score}')
     
-    original_model = baseline_rfr(game_match_df)
+    #original_model = baseline_rfr(game_match_df)
     #best_tuned_random_forest = train_random_forest(model_df=game_match_df)
     #best_tuned_gradient_boost = train_gradient_boost(model_df=game_match_df)
     #best_home_model = single_output_random_forest(model_df=game_match_df, output_data=True)
+    best_poisson_model = train_poisson_model(model_df=game_match_df, output_data=True)
     
 
     # Save our models
@@ -474,4 +540,7 @@ if __name__ == '__main__':
     
     #save_pickle_model(file_name="single_target_random_forest_model.pkl",
     #                  model=best_home_model)    
+
+    save_pickle_model(file_name="poisson_regression_model.pkl",
+                      model=best_poisson_model)
 # %%
