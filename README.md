@@ -35,7 +35,7 @@ In order to create the `players.csv` table, you must run the `PlayerDataCollecti
 In order to create the 'game_starter_all.csv' table, you must run the 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This is a long running script!
 
 ## How to create injuries_all.csv
-[Enter Info Here]
+In order to create the 'injuries_all.csv' table, you must run the 'injuries_scraping_with_BeautifulSoup.py'.
 
 ## How to create player_defense_all.csv
 In order to create the 'player_defense_all.csv' table, you must run the 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This is a long running script!
