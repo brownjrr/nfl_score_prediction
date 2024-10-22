@@ -32,7 +32,7 @@ In order to create the `play_by_play.csv` table, you must run `game_data_scrapin
 In order to create the `players.csv` table, you must run the `PlayerDataCollection.ipynb` notebook. This is a long running script!
 
 ## How to create game_starters_all.csv
-[Enter Info Here]
+In order to create the 'game_starter_all.csv' table, you must run the 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This is a long running script!
 
 ## How to create injuries_all.csv
 [Enter Info Here]
