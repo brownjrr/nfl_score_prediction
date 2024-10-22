@@ -31,26 +31,29 @@ In order to create the `play_by_play.csv` table, you must run `game_data_scrapin
 ## How to create players.csv
 In order to create the `players.csv` table, you must run the `PlayerDataCollection.ipynb` notebook. This is a long running script!
 
+## How to create game_stats_all.csv
+In order to create the 'game_stats_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
+
 ## How to create game_starters_all.csv
-[Enter Info Here]
+In order to create the 'game_starters_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create injuries_all.csv
-[Enter Info Here]
+In order to create the 'injuries_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create player_defense_all.csv
-[Enter Info Here]
+In order to create the 'player_defense_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create player_kicking_all.csv
-[Enter Info Here]
+In order to create the 'player_kicking_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create player_offense_all.csv
-[Enter Info Here]
+In order to create the 'player_offense_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create player_returns_all.csv
-[Enter Info Here]
+In order to create the 'player_returns_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create snap_counts_all.csv
-[Enter Info Here]
+In order to create the 'snap_counts_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create raw_game_level_coach_data.csv
 In order to create `raw_game_level_coach_data.csv`, you must run `game_data_scraping.py`. This is a long running script!
@@ -68,10 +71,10 @@ In order to create `rosters.csv`, you must run `RosterDataCollection.ipynb`.
 [Enter Info Here]
 
 ## How to create games_info_all.csv
-[Enter Info Here]
+In order to create the 'games_info_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create game_starters_all.csv
-[Enter Info Here]
+In order to create the 'game_starters_all.csv' table, you must run 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This could be a long running script!
 
 ## How to create team_dict.csv
 [Enter Info Here]
@@ -83,4 +86,4 @@ In order to create `rosters.csv`, you must run `RosterDataCollection.ipynb`.
 Hand crafted
 
 ## How to create custom_weights.csv
-[Enter Info Here]
+Hand crafted
