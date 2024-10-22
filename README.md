@@ -62,7 +62,7 @@ In order to create `player_positions.csv`, you must run `create_player_position.
 In order to create `rosters.csv`, you must run `RosterDataCollection.ipynb`.
 
 ## How to create teams.csv
-[Enter Info Here]
+This is created through the file through `gather/nfl_scrape_teams.py`
 
 ## How to create coaches.csv
 [Enter Info Here]
@@ -73,14 +73,8 @@ In order to create `rosters.csv`, you must run `RosterDataCollection.ipynb`.
 ## How to create game_starters_all.csv
 [Enter Info Here]
 
-## How to create team_dict.csv
-[Enter Info Here]
-
-## How to create team_dict_short.csv
-[Enter Info Here]
-
-## How to create position_alias.csv
-Hand crafted
+## team_dict.json,  team_dict_short.json, and position_alias.json
+These are dictionaries with team information, and position information, created manually.
 
 ## How to create custom_weights.csv
 [Enter Info Here]
