@@ -18,6 +18,9 @@ games_dataframe: ./prediction_pipeline/team_features.py ./data/coach_ratings.csv
 ./data/coach_ratings.csv: ./scripts/coaches_rating.py ./data/game_level_coach_data_extended.csv
 	python ./scripts/coaches_rating.py
 
+./data/team_rating.csv: ./scripts/team_rating.py ./data/game_stats_all.csv
+	python ./scripts/team_rating.py
+
 ./data/game_level_coach_data_extended.csv: ./scripts/coach_stats_augment.py ./data/play_by_play_extended_v2.csv ./data/game_level_coach_data.csv
 	python ./scripts/coach_stats_augment.py
 
