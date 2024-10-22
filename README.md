@@ -65,7 +65,7 @@ In order to create `rosters.csv`, you must run `RosterDataCollection.ipynb`.
 This is created through the file through `gather/nfl_scrape_teams.py`
 
 ## How to create coaches.csv
-[Enter Info Here]
+In order to create the 'coaches.csv' table, you must run the 'coaches_scraping_with_BeautifulSoup.py'.
 
 ## How to create games_info_all.csv
 In order to create the 'games_info_all.csv' table, you must run the 'all_games_scraping_with_BeautifulSoup.ipynb' notebook. This is a long running script!
